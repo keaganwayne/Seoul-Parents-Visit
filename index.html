@@ -1,0 +1,2789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seoul Family Travel Guide</title>
+  <!-- Tabler Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <!-- Leaflet map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<style>
+:root { --guide-font: "Noto Serif KR", Georgia, "Times New Roman", serif; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.container { padding: 1rem 0; font-family: var(--guide-font); }
+.header { margin-bottom: 1.5rem; }
+.header h1 { font-size:25px; font-weight: 500; color: var(--color-text-primary); }
+.header p { font-size:17px; color: var(--color-text-secondary); margin-top: 4px; }
+.legend-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+.legend-row span { font-size:14px; color: var(--color-text-secondary); }
+.map-area { position: relative; width: 100%; background: linear-gradient(180deg, #F7FAFD 0%, #EEF4F8 100%); border-radius: calc(var(--border-radius-lg) + 2px); border: 0.5px solid var(--color-border-tertiary); overflow: hidden; margin-bottom: 1.5rem; box-shadow: inset 0 1px 0 rgba(255,255,255,0.7); }
+#leaflet-map { width: 100%; height: 520px; }
+.map-footnote { font-size:14px; color: var(--color-text-tertiary); padding: 8px 12px 10px; background: rgba(255,255,255,0.78); border-top: 0.5px solid var(--color-border-tertiary); }
+.leaflet-container { font-family: var(--guide-font); background: #EDF4F8; }
+.leaflet-control-attribution { font-size:13px; }
+.leaflet-control-zoom { border: none !important; box-shadow: 0 2px 10px rgba(0,0,0,0.12) !important; }
+.leaflet-control-zoom a { border: none !important; }
+.map-zone-label { background: rgba(255,255,255,0.92); border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 6px 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.10); color: #1F2937; line-height: 1.15; white-space: nowrap; }
+.map-zone-label .en { display:block; font-size:15px; font-weight:700; }
+.map-zone-label .kr { display:block; font-size:13px; color:#6B7280; margin-top:2px; }
+.map-landmark-label { background: rgba(255,255,255,0.85); border: 1px solid rgba(100,116,139,0.18); border-radius: 8px; padding: 3px 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); color:#475569; font-size:13px; white-space: nowrap; }
+.map-svg { width: 100%; height: auto; display: block; }
+.zone-btn { cursor: pointer; transition: opacity 0.15s, transform 0.15s ease, filter 0.15s ease; }
+.zone-btn:hover { opacity: 1; transform: translateY(-1px); filter: saturate(1.04); }
+.zone-btn .zone-shape { transition: opacity 0.15s ease, stroke-width 0.15s ease, filter 0.15s ease; }
+.zone-btn .zone-label-card { transition: transform 0.15s ease, fill 0.15s ease, stroke 0.15s ease; }
+.zone-btn:hover .zone-shape, .zone-btn.active .zone-shape { opacity: 1 !important; stroke-width: 2.2; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.10)); }
+.zone-btn:hover .zone-label-card, .zone-btn.active .zone-label-card { fill: rgba(255,255,255,0.96); stroke: rgba(0,0,0,0.18); }
+.zone-btn:hover .zone-label-card { transform: translateY(-1px); }
+.zone-label-en { font-size:15.5px; font-weight: 700; font-family: var(--guide-font); }
+.zone-label-kr { font-size:13px; font-family: var(--guide-font); }
+.zone-caption { font-size:12.5px; font-family: var(--guide-font); opacity: 0.88; }
+.map-water-label, .map-landmark-label, .map-small-label { font-family: var(--guide-font); }
+.map-small-label { font-size:13px; fill: #63758A; }
+.map-note { font-size:13px; fill: #72859B; font-family: var(--guide-font); }
+.bridge-line { stroke: rgba(70,118,170,0.28); stroke-width: 2; stroke-linecap: round; }
+.road-line { stroke: rgba(255,255,255,0.65); stroke-width: 4; stroke-linecap: round; fill: none; }
+.road-line.secondary { stroke: rgba(255,255,255,0.38); stroke-width: 2.4; }
+.district-outline { fill: none; stroke: rgba(111, 124, 139, 0.28); stroke-width: 1; stroke-dasharray: 4 4; }
+.subway-line { fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: 0.92; }
+.subway-line.line1 { stroke: #0052A4; stroke-width: 4; }
+.subway-line.line2 { stroke: #00A84D; stroke-width: 4.5; }
+.subway-line.line3 { stroke: #EF7C1C; stroke-width: 4; }
+.subway-line.line4 { stroke: #00A5DE; stroke-width: 4; }
+.subway-line.line5 { stroke: #996CAC; stroke-width: 3.8; }
+.subway-station { fill: #ffffff; stroke: #7B8794; stroke-width: 1; }
+.subway-label { font-size:12px; fill: #516173; font-family: var(--guide-font); }
+.landmark-dot { fill: #fff; stroke: #64748B; stroke-width: 1; }
+.landmark-name { font-size:12px; fill: #4E5E70; font-family: var(--guide-font); }
+.area-caption { font-size:11.5px; fill: #79889A; font-family: var(--guide-font); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.5rem; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size:15px; color: var(--color-text-secondary); cursor: pointer; padding: 4px 10px; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); background: var(--color-background-primary); transition: background 0.15s; }
+.legend-item:hover { background: var(--color-background-secondary); }
+.legend-item.active { border-color: var(--color-border-primary); color: var(--color-text-primary); font-weight: 500; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.detail-panel { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1.25rem; }
+.detail-empty { text-align: center; padding: 2rem; color: var(--color-text-secondary); font-size:17px; }
+.detail-empty i { font-size:35px; display: block; margin-bottom: 8px; color: var(--color-text-tertiary); }
+.zone-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.zone-color-dot { width: 14px; height: 14px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+.zone-title { font-size:21px; font-weight: 500; color: var(--color-text-primary); }
+.zone-subtitle { font-size:16px; color: var(--color-text-secondary); margin-top: 2px; }
+.zone-note { font-size:16px; color: var(--color-text-warning); background: var(--color-background-warning); border: 0.5px solid var(--color-border-warning); border-radius: var(--border-radius-md); padding: 8px 12px; margin-bottom: 1.25rem; display: flex; gap: 8px; align-items: flex-start; }
+.tabs { display: flex; gap: 4px; margin-bottom: 1rem; flex-wrap: wrap; }
+.tab { padding: 6px 14px; font-size:16px; cursor: pointer; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); background: transparent; color: var(--color-text-secondary); transition: all 0.15s; }
+.tab:hover { background: var(--color-background-secondary); }
+.tab.active { background: var(--color-background-secondary); border-color: var(--color-border-primary); color: var(--color-text-primary); font-weight: 500; }
+.place-list { display: flex; flex-direction: column; gap: 8px; }
+.place-card { padding: 10px 12px; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); background: var(--color-background-secondary); }
+.place-card.jin-pick { border-color: #D4537E; border-width: 1px; }
+.place-top { display: flex; gap: 12px; align-items: flex-start; }
+.place-icon { font-size:21px; color: var(--color-text-secondary); flex-shrink: 0; margin-top: 1px; }
+.place-info { flex: 1; min-width: 0; }
+.place-name { font-size:17px; font-weight: 500; color: var(--color-text-primary); }
+.place-map-trigger { border: 0; background: transparent; padding: 0; margin: 0; font: inherit; cursor: pointer; text-align: left; color: var(--color-text-primary); text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; transition: color 0.15s, text-decoration-color 0.15s; }
+.place-map-trigger:hover { color: var(--color-text-info); text-decoration-color: currentColor; }
+.place-map-trigger:focus-visible { outline: 2px solid var(--color-border-primary); outline-offset: 2px; border-radius: 4px; }
+.place-map-cue { font-size:13px; color: var(--color-text-tertiary); margin-left: 4px; font-weight: 400; }
+.place-map-trigger:hover .place-map-cue { color: inherit; }
+.place-map-pin { width: 22px; height: 22px; border-radius: 50% 50% 50% 0; background: #D93D3D; transform: rotate(-45deg); border: 2px solid #fff; box-shadow: 0 3px 10px rgba(0,0,0,0.28); }
+.place-map-pin::after { content: ""; position: absolute; width: 7px; height: 7px; border-radius: 50%; background: #fff; left: 5.5px; top: 5.5px; }
+.place-popup-title { font-weight: 700; font-size:16px; margin-bottom: 2px; }
+.place-popup-kr { color: #64748B; font-size:14px; margin-bottom: 5px; }
+.place-popup-note { color: #475569; font-size:14px; }
+
+.place-name-kr { font-size:15px; color: var(--color-text-secondary); margin-top: 1px; }
+.place-desc { font-size:15px; color: var(--color-text-secondary); margin-top: 4px; line-height: 1.62; }
+.place-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; flex-wrap: wrap; gap: 6px; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.place-tag { display: inline-block; font-size:14px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+.tag-must { background: var(--color-background-info); color: var(--color-text-info); }
+.tag-tip { background: var(--color-background-success); color: var(--color-text-success); }
+.tag-warn { background: var(--color-background-warning); color: var(--color-text-warning); }
+.tag-photo { background: var(--color-background-danger); color: var(--color-text-danger); }
+.tag-neutral { background: var(--color-background-secondary); color: var(--color-text-secondary); border: 0.5px solid var(--color-border-tertiary); }
+.tag-jin { background: #FBEAF0; color: #993556; border: 1px solid #ED93B1; }
+.maps-btn { display: inline-flex; align-items: center; gap: 4px; font-size:14px; padding: 3px 9px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); color: var(--color-text-secondary); background: var(--color-background-primary); cursor: pointer; text-decoration: none; white-space: nowrap; transition: background 0.15s; }
+.maps-btn:hover { background: var(--color-background-secondary); color: var(--color-text-primary); }
+.section-divider { font-size:14px; font-weight: 500; color: var(--color-text-tertiary); letter-spacing: 0.04em; padding: 4px 0 2px; border-bottom: 0.5px solid var(--color-border-tertiary); margin-bottom: 4px; margin-top: 8px; }
+
+.place-title-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.transport-badges { display:inline-flex; align-items:center; gap:3px; flex-wrap:wrap; }
+.line-icon { min-width:18px; height:18px; padding:0 5px; border-radius:999px; color:#fff; font-size:13px; line-height:18px; text-align:center; font-weight:700; display:inline-flex; align-items:center; justify-content:center; border:0.5px solid rgba(0,0,0,0.12); }
+.line-1 { background:#0052A4; } .line-2 { background:#00A84D; } .line-3 { background:#EF7C1C; } .line-4 { background:#00A5DE; } .line-5 { background:#996CAC; } .line-6 { background:#CD7C2F; } .line-7 { background:#747F00; } .line-8 { background:#E6186C; } .line-9 { background:#BDB092; color:#222; }
+.line-airport { background:#0090D2; } .line-gj { background:#77C4A3; color:#08382D; } .line-bundang { background:#FABE00; color:#222; }
+.line-shinbundang { background:#D4003B; } .line-u { background:#B7C452; color:#222; }
+.nearest-station-label { background: rgba(255,255,255,0.96); border: 1px solid rgba(15,23,42,0.18); border-radius: 999px; padding: 4px 8px; box-shadow: 0 4px 14px rgba(15,23,42,0.18); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.nearest-station-label .station-name { font-size:14px; font-weight: 700; color: #1F2937; }
+.place-popup-station { margin-top: 7px; padding-top: 7px; border-top: 1px solid rgba(100,116,139,0.18); font-size:14px; color: #334155; }
+.place-popup-station-title { font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+.place-popup-station-line { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.station-distance { color: #64748B; font-size:13px; }
+
+.mode-walk { background:#6B7280; } .mode-taxi { background:#111827; } .mode-cable { background:#8B5CF6; }
+.transport-station { font-size:13px; color:var(--color-text-tertiary); margin-left:2px; }
+.place-meta-row { display:flex; align-items:center; flex-wrap:wrap; gap:5px; margin-top:5px; }
+.meta-chip { display:inline-flex; align-items:center; gap:3px; font-size:14px; padding:2px 7px; border-radius:4px; background:var(--color-background-primary); color:var(--color-text-secondary); border:0.5px solid var(--color-border-tertiary); }
+.cuisine-chip { background:#F3E8FF; color:#6B21A8; border-color:#D8B4FE; }
+.place-redflag { margin-top:6px; font-size:14.5px; line-height:1.45; color:#991B1B; background:#FEE2E2; border:0.5px solid #FCA5A5; border-radius:6px; padding:6px 8px; display:flex; gap:5px; align-items:flex-start; }
+.place-redflag strong { font-weight:700; }
+
+
+
+.app-shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 18px; align-items: start; width: 100%; }
+.side-nav { position: sticky; top: 12px; min-height: calc(100vh - 24px); background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: calc(var(--border-radius-lg) + 2px); padding: 14px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); }
+.side-brand { padding: 6px 4px 14px; border-bottom: 0.5px solid var(--color-border-tertiary); margin-bottom: 12px; }
+.side-brand-title { font-size:19px; font-weight: 700; color: var(--color-text-primary); line-height: 1.2; }
+.side-brand-subtitle { font-size:14px; color: var(--color-text-tertiary); margin-top: 4px; line-height: 1.42; }
+.nav-menu { display: flex; flex-direction: column; gap: 6px; }
+.nav-btn { width: 100%; border: 0.5px solid transparent; background: transparent; color: var(--color-text-secondary); border-radius: var(--border-radius-md); padding: 10px 10px; text-align: left; display: flex; align-items: center; gap: 9px; cursor: pointer; font-size:16px; line-height: 1.35; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.nav-btn i { font-size:20px; color: var(--color-text-tertiary); }
+.nav-btn:hover { background: var(--color-background-secondary); color: var(--color-text-primary); }
+.nav-btn.active { background: var(--color-background-info); border-color: var(--color-border-primary); color: var(--color-text-primary); font-weight: 600; }
+.nav-btn.active i { color: var(--color-text-info); }
+.nav-note { margin-top: 14px; padding: 10px; border-radius: var(--border-radius-md); background: var(--color-background-secondary); color: var(--color-text-tertiary); font-size:14px; line-height: 1.45; }
+.app-main { min-width: 0; overflow: visible; }
+.page-view { display: none; }
+.page-view.active { display: block; }
+.home-panel { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1.35rem; }
+.home-hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr); gap: 16px; align-items: stretch; margin-bottom: 1rem; }
+.home-card { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); background: var(--color-background-secondary); padding: 14px; }
+.home-card h3 { font-size:17px; color: var(--color-text-primary); margin-bottom: 8px; }
+.home-card p, .home-card li { font-size:15.5px; color: var(--color-text-secondary); line-height: 1.68; }
+.home-card ol { padding-left: 18px; display: grid; gap: 5px; }
+.home-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.primary-action { border: 0.5px solid var(--color-border-primary); background: var(--color-background-info); color: var(--color-text-primary); border-radius: var(--border-radius-md); padding: 8px 12px; cursor: pointer; font-size:15px; font-weight: 600; }
+.secondary-action { border: 0.5px solid var(--color-border-tertiary); background: var(--color-background-primary); color: var(--color-text-secondary); border-radius: var(--border-radius-md); padding: 8px 12px; cursor: pointer; font-size:15px; }
+.page-intro { font-size:16px; color: var(--color-text-secondary); line-height: 1.62; margin-top: 4px; }
+.map-slot { margin-bottom: 1rem; }
+.hotel-card, .pick-card { padding: 12px; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); background: var(--color-background-secondary); }
+.hotel-area-group { margin-bottom: 2rem; }
+.hotel-area-group:last-child { margin-bottom: 0; }
+.hotel-area-header { background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0; padding: 14px 18px; border-bottom: none; }
+.hotel-area-name { font-size: 19px; font-weight: 700; color: var(--color-text-primary); }
+.hotel-area-why { font-size: 14px; color: var(--color-text-secondary); margin-top: 5px; line-height: 1.55; }
+.hotel-tier-group { border: 0.5px solid var(--color-border-tertiary); border-top: none; padding: 12px 16px 14px; }
+.hotel-tier-group:last-child { border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg); }
+.hotel-tier-header { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.hotel-tier-label { font-size: 15px; font-weight: 700; }
+.hotel-tier-stars { font-size: 13px; color: var(--color-text-tertiary); background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: 4px; padding: 1px 6px; }
+.hotel-tier-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+
+.hotel-top, .pick-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.hotel-name, .pick-name { font-size:17px; font-weight: 600; color: var(--color-text-primary); }
+.hotel-area, .pick-zone { font-size:14px; color: var(--color-text-tertiary); white-space: nowrap; padding-top: 2px; }
+.hotel-desc, .pick-desc { font-size:15px; color: var(--color-text-secondary); line-height: 1.62; margin-top: 6px; }
+.hotel-meta, .pick-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; align-items: center; }
+.empty-state-card { padding: 18px; border: 0.5px dashed var(--color-border-tertiary); border-radius: var(--border-radius-md); color: var(--color-text-secondary); font-size:16px; background: var(--color-background-secondary); }
+.course-list { display: grid; gap: 18px; }
+.course-card { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); background: var(--color-background-primary); overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.course-card-header { padding: 14px 16px 12px; background: var(--color-background-secondary); border-bottom: 0.5px solid var(--color-border-tertiary); }
+.course-kicker { font-size:13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+.course-title { font-size:18px; font-weight: 700; color: var(--color-text-primary); line-height: 1.3; }
+.course-summary { font-size:14px; color: var(--color-text-secondary); line-height: 1.55; margin-top: 5px; }
+.course-day-note { font-size:13px; color: var(--color-text-secondary); background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 7px 10px; margin-top: 8px; display:flex; gap:6px; align-items:flex-start; line-height:1.5; }
+.course-meta { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+.course-body { padding: 0; display:grid; gap:0; }
+.course-warning { font-size:14px; color: var(--color-text-warning); background: var(--color-background-warning); border-bottom: 0.5px solid var(--color-border-warning); padding:10px 16px; line-height:1.55; display:flex; gap:7px; align-items:flex-start; }
+.course-optional { font-size:14px; color: var(--color-text-secondary); background: var(--color-background-secondary); border-top:0.5px solid var(--color-border-tertiary); padding:10px 16px; line-height:1.55; }
+.course-choice { color: var(--color-text-info); font-weight:600; }
+
+.course-section { border-top: 0.5px solid var(--color-border-tertiary); }
+.course-section-title { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding: 10px 16px 8px; }
+.course-section-icon { width:22px; height:22px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+.course-steps-block { padding: 0 16px 12px; display:grid; gap:0; }
+
+.course-step { display:grid; grid-template-columns: 110px minmax(0,1fr); gap:10px; padding: 10px 0; border-top: 0.5px solid var(--color-border-tertiary); }
+.course-step:first-child { border-top: none; }
+.course-time-col { padding-top: 2px; }
+.course-time-label { font-size:13px; font-weight:700; color: var(--color-text-primary); }
+.course-duration { font-size:12px; color: var(--color-text-tertiary); display:flex; align-items:center; gap:3px; margin-top:3px; }
+.course-step-main { min-width:0; }
+.course-place-line { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.course-place-line .place-map-trigger { font-size:15px; font-weight:700; }
+.course-who-row { display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
+.who-tag { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px; border:1px solid; white-space:nowrap; }
+.course-note { font-size:13.5px; color: var(--color-text-secondary); line-height: 1.58; margin-top:5px; }
+
+.nav-btn-family { border-color: #D85A30 !important; }
+.nav-btn-family i { color: #D85A30 !important; }
+.nav-btn-family.active { background: #FEF3EE !important; }
+
+@media (max-width: 560px) {
+  .course-step { grid-template-columns: 1fr; gap:3px; }
+  .course-time-col { padding-top:0; display:flex; gap:8px; align-items:center; }
+}
+@media (max-width: 860px) {
+  .app-shell { grid-template-columns: 1fr; gap: 12px; }
+  .side-nav { position: relative; top: auto; min-height: 0; }
+  .nav-menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-hero { grid-template-columns: 1fr; }
+  #leaflet-map { height: 430px; }
+  .itinerary-layout { grid-template-columns: 1fr; }
+  .itinerary-map-col { order: -1; }
+  .itinerary-map-sticky { position: relative; top: auto; }
+  .itinerary-map-sticky #picks-map-slot #leaflet-map { height: 380px; }
+}
+
+.itinerary-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.itinerary-courses { min-width: 0; padding-bottom: 2rem; }
+.itinerary-map-col { min-width: 0; }
+.itinerary-map-sticky { position: sticky; top: 0; }
+.itinerary-map-hint { font-size: 13px; color: var(--color-text-tertiary); text-align: center; padding: 7px 10px 4px; }
+.itinerary-map-sticky .map-slot { margin-bottom: 0; }
+.itinerary-map-sticky #picks-map-slot .map-area { margin-bottom: 0; }
+.itinerary-map-sticky #picks-map-slot #leaflet-map { height: calc(100vh - 32px); }
+.picks-page-header { padding: 0 0 1rem 0; }
+.picks-page-header h1 { font-size: 25px; font-weight: 500; color: var(--color-text-primary); }
+#page-picks { overflow: visible; }
+</style>
+
+
+<div class="app-shell">
+  <aside class="side-nav" aria-label="Main navigation">
+    <div class="side-brand">
+      <div class="side-brand-title">Seoul family guide</div>
+    </div>
+    <nav class="nav-menu">
+      <button class="nav-btn active" id="nav-home" type="button" onclick="showAppPage('home')"><i class="ti ti-home" aria-hidden="true"></i><span>Home</span></button>
+      <button class="nav-btn" id="nav-picks" type="button" onclick="showAppPage('picks')"><i class="ti ti-calendar-week" aria-hidden="true"></i><span>Suggested Itinerary</span></button>
+      <button class="nav-btn nav-btn-family" id="nav-family" type="button" onclick="showAppPage('family')"><i class="ti ti-confetti" aria-hidden="true"></i><span>a sample day–a sample day Tour</span></button>
+      <button class="nav-btn" id="nav-map" type="button" onclick="showAppPage('map')"><i class="ti ti-map-2" aria-hidden="true"></i><span>Seoul Map</span></button>
+      <button class="nav-btn" id="nav-hotels" type="button" onclick="showAppPage('hotels')"><i class="ti ti-bed" aria-hidden="true"></i><span>Hotel Shortlist</span></button>
+    </nav>
+    <div class="nav-note">Tip: place names are clickable. Clicking a name drops an approximate pin and the nearest subway station on the map; use Google Maps for exact navigation.</div>
+  </aside>
+
+  <main class="app-main">
+    <section class="page-view active" id="page-home">
+      <div class="home-panel">
+        <div class="header">
+          <h1><i class="ti ti-compass" aria-hidden="true"></i> Seoul travel guide</h1>
+          <p class="page-intro">Use the left menu to switch between the full Seoul map, hotel shortlist, and suggested sightseeing routes.</p>
+        </div>
+        <div class="home-hero">
+          <div class="home-card">
+            <h3>How to use this guide</h3>
+            <ol>
+              <li>Start with <strong>Seoul Map</strong> to understand Seoul by neighbourhood.</li>
+              <li>Click a district on the map to see sights, food, and cafés.</li>
+              <li>Click any place name to drop an approximate pin on the map.</li>
+              <li>Use the <strong>Google Maps</strong> button on each card for exact directions or taxi navigation.</li>
+              <li>Use <strong>Hotel Shortlist</strong> if accommodation is still undecided.</li>
+              <li>Use <strong>Suggested Itinerary</strong> for day-course ideas with warnings and meal stops.</li>
+            </ol>
+            <div class="home-actions">
+              <button class="primary-action" type="button" onclick="showAppPage('map')">Open Seoul map</button>
+              <button class="secondary-action" type="button" onclick="showAppPage('hotels')">View hotels</button>
+            </div>
+          </div>
+          <div class="home-card">
+            <h3>Design logic</h3>
+            <p>This guide is built for English-first use. Korean names remain visible for taxis, Naver/Kakao searches, and showing drivers or hotel staff.</p>
+            <p style="margin-top:8px;">Suggested routes combine Local personal recommendations with practical sequencing, warnings, and meal stops.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page-view" id="page-map">
+<div class="container guide-page-inner">
+  <h2 class="sr-only">Seoul neighborhood travel guide — click a district to explore attractions, restaurants, and cafés</h2>
+  <div class="header">
+    <h1><i class="ti ti-map-pin" aria-hidden="true"></i> Seoul travel guide</h1>
+    <p>Click a district on the map or use the legend to explore places to visit</p>
+    <div class="legend-row">
+      <span>Tags:</span>
+      <span class="place-tag tag-jin" style="font-size:14px;">Local pick</span>
+      <span class="place-tag tag-must" style="font-size:14px;">Must-see</span>
+      <span class="place-tag tag-photo" style="font-size:14px;">Photo-worthy</span>
+      <span class="place-tag tag-tip" style="font-size:14px;">Insider tip</span>
+      <span class="place-tag tag-warn" style="font-size:14px;">Heads up</span>
+      <span class="meta-chip" style="font-size:14px;"><i class="ti ti-clock" aria-hidden="true"></i> Estimated time</span>
+      <span class="meta-chip cuisine-chip" style="font-size:14px;">Cuisine</span>
+      <span class="line-icon line-2" title="Subway line badge">2</span>
+    </div>
+  </div>
+
+  <div class="map-slot" id="map-page-map-slot">
+  <div class="map-area" id="shared-map-area">
+    <div id="leaflet-map" aria-label="Interactive Seoul district map"></div>
+    <div class="map-footnote">Live base map uses OpenStreetMap tiles. The coloured shapes are refined neighbourhood-region boundaries for this guide, so they are closer to real district geography than before, but still simplified for readability.</div>
+  </div>
+  </div>
+
+  <div class="legend" id="legend">
+    <div class="legend-item" id="leg-gwanghwamun" onclick="selectZone('gwanghwamun')"><div class="legend-dot" style="background:#D85A30;"></div>Gwanghwamun · Jongno</div>
+    <div class="legend-item" id="leg-dongdaemun" onclick="selectZone('dongdaemun')"><div class="legend-dot" style="background:#3B6D11;"></div>Dongdaemun</div>
+    <div class="legend-item" id="leg-myeongdong" onclick="selectZone('myeongdong')"><div class="legend-dot" style="background:#185FA5;"></div>Myeongdong · City Hall</div>
+    <div class="legend-item" id="leg-yongsan" onclick="selectZone('yongsan')"><div class="legend-dot" style="background:#534AB7;"></div>Yongsan</div>
+    <div class="legend-item" id="leg-hongdae" onclick="selectZone('hongdae')"><div class="legend-dot" style="background:#993556;"></div>Hongdae</div>
+    <div class="legend-item" id="leg-seongsu" onclick="selectZone('seongsu')"><div class="legend-dot" style="background:#BA7517;"></div>Seongsu</div>
+    <div class="legend-item" id="leg-gangnam" onclick="selectZone('gangnam')"><div class="legend-dot" style="background:#5F5E5A;"></div>Gangnam</div>
+    <div class="legend-item" id="leg-jamsil" onclick="selectZone('jamsil')"><div class="legend-dot" style="background:#0F6E56;"></div>Jamsil</div>
+  </div>
+
+  <div class="detail-panel" id="detail-panel">
+    <div class="detail-empty">
+      <i class="ti ti-map-2" aria-hidden="true"></i>
+      Select a district on the map or from the legend above
+    </div>
+  </div>
+</div>
+    </section>
+
+    <section class="page-view" id="page-hotels">
+      <div class="container">
+        <div class="header">
+          <h1><i class="ti ti-bed" aria-hidden="true"></i> Hotel shortlist by area</h1>
+          <p class="page-intro">Hotels organised by neighbourhood and star rating. Click a hotel name to show its approximate location on the map. All five areas below are practical bases — choose based on which part of Seoul the group plans to spend the most time in.</p>
+        </div>
+        <div class="map-slot" id="hotel-map-slot"></div>
+        <div id="hotel-list"></div>
+      </div>
+    </section>
+
+    <section class="page-view" id="page-picks">
+      <div class="picks-page-header">
+        <h1><i class="ti ti-calendar-week" aria-hidden="true"></i> Suggested itinerary</h1>
+        <p class="page-intro">Sample day-by-day courses using the places in this guide. Click any place name to show its approximate map location and nearest subway station.</p>
+      </div>
+      <div class="itinerary-layout">
+        <div class="itinerary-courses">
+          <div class="course-list" id="jin-picks-list"></div>
+        </div>
+        <div class="itinerary-map-col">
+          <div class="itinerary-map-sticky">
+            <div class="map-slot" id="picks-map-slot"></div>
+            <div class="itinerary-map-hint">Click any place name in the itinerary to pin it on the map</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="page-view" id="page-family">
+      <div class="picks-page-header">
+        <h1><i class="ti ti-confetti" aria-hidden="true"></i> Sample day 1–6 Family Tour</h1>
+        <p class="page-intro">Demo travellers + family — 3 days together after the wedding. a sample day departure to the next destination.</p>
+      </div>
+      <div class="itinerary-layout">
+        <div class="itinerary-courses">
+          <div class="course-list" id="family-tour-list"></div>
+        </div>
+        <div class="itinerary-map-col">
+          <div class="itinerary-map-sticky">
+            <div class="map-slot" id="family-map-slot"></div>
+            <div class="itinerary-map-hint">Click any place name to pin it on the map</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+function mapsUrl(q) { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q + ' Seoul Korea'); }
+
+const zones = {
+  gwanghwamun: {
+    name: "Gwanghwamun & Jongno", nameKr: "광화문 · 종로", color: "#D85A30", note: null,
+    attractions: [
+      { name: "Gyeongbokgung Palace", kr: "경복궁", icon: "ti-building-castle", maps: "경복궁", desc: "The grandest of Seoul's five royal palaces. Arrive early to catch the guard-changing ceremony at the main gate. Hanbok rental is available at the entrance — great fun for photos.", tags: [{t:"must",l:"Must-see"},{t:"photo",l:"Photo-worthy"},{t:"tip",l:"Arrive early"}] },
+      { name: "Changgyeonggung Palace", kr: "창경궁", icon: "ti-building-castle", maps: "창경궁", desc: "A quieter, more intimate palace with far fewer crowds than Gyeongbokgung. Particularly beautiful in autumn as the leaves turn.", tags: [{t:"tip",l:"Less crowded"},{t:"neutral",l:"Autumn colours"}] },
+      { name: "Bukchon Hanok Village", kr: "북촌한옥마을", icon: "ti-home", maps: "북촌한옥마을", desc: "A hillside neighbourhood of traditional Korean wooden houses (hanok). Best explored on foot in the early morning before tour groups arrive. This is a living neighbourhood — please be respectful of residents.", tags: [{t:"must",l:"Must-see"},{t:"photo",l:"Photo-worthy"},{t:"tip",l:"Go early morning"}] },
+      { name: "Baekin-je House", kr: "백인제가옥", icon: "ti-home", maps: "백인제가옥", desc: "A remarkably well-preserved traditional Korean estate in Bukchon — one of the largest hanok in Seoul. Quieter than the main village alley and often overlooked by tourists.", tags: [{t:"jin",l:"Local pick"},{t:"photo",l:"Photo-worthy"},{t:"tip",l:"Free entry"}], jin: true },
+      { name: "Seosunna-gil", kr: "서순라길", icon: "ti-walk", maps: "서순라길 종로", desc: "A lively alley running along the old palace wall. By day it's a charming historic lane; after sunset it becomes one of Seoul's best outdoor bar (야장) strips.", tags: [{t:"jin",l:"Local pick"},{t:"tip",l:"Nighttime bar alley"},{t:"photo",l:"Photo-worthy"}], jin: true },
+      { name: "Samcheongdong Street", kr: "삼청동", icon: "ti-walk", maps: "삼청동길", desc: "A charming tree-lined street connecting Gyeongbokgung to Bukchon, full of independent galleries, boutiques, and cafés. One of Seoul's most pleasant strolls.", tags: [{t:"tip",l:"Great for strolling"},{t:"neutral",l:"Galleries & boutiques"}] },
+      { name: "National Museum of Modern & Contemporary Art (MMCA)", kr: "국립현대미술관", icon: "ti-palette", maps: "국립현대미술관 서울관", desc: "The Seoul branch sits inside Gyeongbokgung's grounds. World-class rotating exhibitions of Korean and international contemporary art.", tags: [{t:"tip",l:"Art lovers"},{t:"neutral",l:"Inside palace grounds"}] },
+      { name: "Jogyesa Temple", kr: "조계사", icon: "ti-building-arch", maps: "조계사", desc: "The head temple of Korean Buddhism, right in central Seoul. Peaceful even at midday. The surrounding Insadong neighbourhood is full of tea houses and craft shops.", tags: [{t:"neutral",l:"Buddhist temple"},{t:"photo",l:"Photo-worthy"}] },
+      { name: "Insadong", kr: "인사동", icon: "ti-shopping-bag", maps: "인사동", desc: "The cultural heart of Jongno — antique shops, traditional crafts, Korean street food, and Ssamziegil, a quirky open-air mall worth wandering.", tags: [{t:"must",l:"Must-see"},{t:"neutral",l:"Shopping & culture"}] },
+      { name: "Yoollin Songkhyun Green Plaza", kr: "열린송현녹지광장", icon: "ti-trees", maps: "열린송현녹지광장", desc: "A beautifully restored open green space in the heart of Jongno — a hidden gem for a relaxed afternoon stroll between palace visits.", tags: [{t:"tip",l:"Hidden gem"},{t:"neutral",l:"Outdoor space"}] },
+    ],
+    restaurants: [
+      { name: "Tosokchon Samgyetang", kr: "토속촌 삼계탕", icon: "ti-soup", maps: "토속촌 삼계탕", desc: "Iconic ginseng chicken soup restaurant near Gyeongbokgung. One of Seoul's most beloved traditional meals — queues are always long but very worth it.", tags: [{t:"must",l:"Iconic"},{t:"warn",l:"Expect queues"}] },
+      { name: "Gwangjang Market", kr: "광장시장", icon: "ti-tools-kitchen-2", maps: "광장시장", desc: "One of Seoul's oldest traditional markets. Famous for bindaetteok (mung bean pancakes), mayak gimbap, and raw skate fish. A genuine local experience.", tags: [{t:"must",l:"Must-try"},{t:"photo",l:"Photo-worthy"},{t:"neutral",l:"Traditional market"}] },
+      { name: "Siminsikhang", kr: "시민식당 본점", icon: "ti-soup", maps: "시민식당 종로", desc: "A beloved lunch spot in Jongno serving hearty Korean set meals at honest prices. Very local atmosphere — a great contrast to tourist-facing restaurants nearby.", tags: [{t:"jin",l:"Local pick"},{t:"tip",l:"Local lunch spot"},{t:"neutral",l:"Korean set meals"}], jin: true },
+      { name: "Jaha Handmade Mandu", kr: "자하손만두", icon: "ti-tools-kitchen-2", maps: "자하손만두 종로", desc: "A legendary handmade dumpling restaurant tucked into the hillside near Buam-dong. Worth the detour — arguably the best mandu in Seoul.", tags: [{t:"jin",l:"Local pick"},{t:"must",l:"Must-try"},{t:"neutral",l:"Handmade dumplings"}], jin: true },
+      { name: "Jongno 3-ga street stall alley", kr: "종로3가 포장마차 골목", icon: "ti-tools-kitchen-2", maps: "종로3가 포장마차", desc: "An atmospheric street-stall alley best visited after dark — soju, tteokbokki, and classic old-Seoul energy.", tags: [{t:"tip",l:"After dark only"},{t:"neutral",l:"Street stalls"}] },
+    ],
+    cafes: [
+      { name: "Café Onion Anguk", kr: "카페 어니언 안국", icon: "ti-coffee", maps: "카페 어니언 안국", desc: "One of the most photographed cafés in Seoul — a beautifully renovated old Korean house with excellent coffee and baked goods.", tags: [{t:"must",l:"Iconic café"},{t:"photo",l:"Photo-worthy"}] },
+      { name: "Gallery The Square — tea omakase", kr: "갤러리더스퀘어", icon: "ti-leaf", maps: "갤러리더스퀘어 계동", desc: "A refined tea omakase experience inside a gallery space in Gye-dong, steps from Bukchon. One of the most unique afternoon tea experiences in Seoul.", tags: [{t:"jin",l:"Local pick"},{t:"warn",l:"Reservation required"},{t:"neutral",l:"Tea omakase"}], jin: true },
+      { name: "Jaiso Anguk", kr: "자이소 안국", icon: "ti-coffee", maps: "자이소 안국", desc: "A serene café near Bukchon with lovely interiors and excellent coffee — a calm escape from the tourist trail.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Calm atmosphere"}], jin: true },
+      { name: "Dawon Traditional Tea House", kr: "다원", icon: "ti-leaf", maps: "다원 인사동", desc: "A traditional Korean tea house in Insadong. Try omija (five-flavour berry) tea and dasik (Korean tea cookies).", tags: [{t:"neutral",l:"Traditional tea"},{t:"tip",l:"Cosy & quiet"}] },
+    ]
+  },
+
+  dongdaemun: {
+    name: "Dongdaemun", nameKr: "동대문", color: "#3B6D11",
+    note: "Dongdaemun pairs well with a visit to Gwanghwamun or Myeongdong — all three are within easy walking or subway distance of each other, so it works well as a half-day add-on rather than a standalone day trip.",
+    attractions: [
+      { name: "Dongdaemun Design Plaza (DDP)", kr: "동대문디자인플라자", icon: "ti-building-arch", maps: "동대문디자인플라자", desc: "Zaha Hadid's landmark building — a sweeping futuristic structure that hosts major design exhibitions, fashion shows, and cultural events. The exterior alone is worth seeing, especially at night when it's fully lit.", tags: [{t:"must",l:"Must-see"},{t:"photo",l:"Stunning at night"},{t:"neutral",l:"Check events calendar"}] },
+      { name: "Dongdaemun History & Culture Park", kr: "동대문역사문화공원", icon: "ti-trees", maps: "동대문역사문화공원", desc: "The park surrounding the DDP, built over excavated remains of the old city wall. A great spot to walk around and take in the contrast of ancient ruins against the futuristic DDP.", tags: [{t:"neutral",l:"Free to visit"},{t:"photo",l:"Photo-worthy"}] },
+      { name: "Heunginjimun Gate (East Gate)", kr: "흥인지문", icon: "ti-building-castle", maps: "흥인지문", desc: "The well-preserved eastern gate of old Seoul, dramatically lit at night. A beautiful piece of history right in the middle of the city.", tags: [{t:"photo",l:"Photo-worthy"},{t:"neutral",l:"Historic gate"}] },
+      { name: "Dongdaemun shopping district", kr: "동대문 쇼핑", icon: "ti-shopping-bag", maps: "동대문 쇼핑", desc: "A sprawling cluster of wholesale and retail fashion markets (Doota, Migliore, Lotte Fitin, etc.) that run 24 hours. Great for affordable Korean fashion — busiest and most atmospheric late at night.", tags: [{t:"neutral",l:"Fashion shopping"},{t:"tip",l:"Busiest after midnight"}] },
+    ],
+    restaurants: [
+      { name: "King Handmade Mandu", kr: "King수제만두", icon: "ti-tools-kitchen-2", maps: "King수제만두 동대문", desc: "A Locally recommended handmade dumpling spot near Dongdaemun — generous portions, crispy or steamed, and very affordable.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Handmade dumplings"}], jin: true },
+      { name: "Sungcheon Makguksu", kr: "성천 막국수", icon: "ti-soup", maps: "성천 막국수 동대문", desc: "A well-regarded buckwheat noodle restaurant in the Dapsimni area — a short hop from Dongdaemun and a local favourite.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Buckwheat noodles"}], jin: true },
+    ],
+    cafes: [
+      { name: "JW Marriott Dongdaemun — café & desserts", kr: "JW 메리어트 동대문스퀘어 카페", icon: "ti-coffee", maps: "JW Marriott Dongdaemun Square Seoul", desc: "The cafés and dessert bars inside the JW Marriott Dongdaemun Square are genuinely excellent — high-quality patisserie, afternoon tea sets, and beautifully presented desserts. A lovely treat after exploring DDP.", tags: [{t:"must",l:"Highly recommended"},{t:"tip",l:"Best desserts in the area"},{t:"neutral",l:"Hotel café"}] },
+    ]
+  },
+
+  myeongdong: {
+    name: "Myeongdong & City Hall", nameKr: "명동 · 시청", color: "#185FA5", note: null,
+    attractions: [
+      { name: "Deoksugung Palace", kr: "덕수궁", icon: "ti-building-castle", maps: "덕수궁", desc: "The only palace open on Mondays. The Stone Wall Road (돌담길) alongside it is one of Seoul's most romantic strolls — especially beautiful in October as the leaves turn.", tags: [{t:"must",l:"Must-see"},{t:"photo",l:"Photo-worthy"},{t:"neutral",l:"Open on Mondays"}] },
+      { name: "Seoul Museum of Art (SeMA)", kr: "서울시립미술관", icon: "ti-palette", maps: "서울시립미술관", desc: "Right next to Deoksugung. Free admission for the permanent collection. The neo-classical main building facade is gorgeous.", tags: [{t:"tip",l:"Free admission"},{t:"photo",l:"Photo-worthy"}] },
+      { name: "Piknic", kr: "피크닉", icon: "ti-palette", maps: "피크닉 중구", desc: "A beautifully designed multi-use cultural space near Cheonggyecheon — rotating exhibitions, a café, and pop-up shops inside a sensitively renovated building.", tags: [{t:"jin",l:"Local pick"},{t:"photo",l:"Photo-worthy"},{t:"neutral",l:"Art & culture space"}], jin: true },
+      { name: "Cheonggyecheon Stream", kr: "청계천", icon: "ti-ripple", maps: "청계천", desc: "A beautifully restored urban stream cutting through central Seoul. Great for a leisurely walk along the banks, and especially beautiful at night when it's lit up.", tags: [{t:"tip",l:"Best at night"},{t:"photo",l:"Photo-worthy"}] },
+      { name: "Myeongdong to Cathedral walk", kr: "명동 → 명동대성당", icon: "ti-walk", maps: "명동대성당", desc: "Start at the buzzing street food alley at the bottom of Myeongdong, work your way up through the shops, and end at the stunning Gothic cathedral at the top of the hill.", tags: [{t:"must",l:"Classic walk"},{t:"photo",l:"Photo-worthy"}] },
+      { name: "Namdaemun Market", kr: "남대문시장", icon: "ti-shopping-bag", maps: "남대문시장", desc: "One of Korea's largest traditional markets. Best for souvenirs, Korean street food, and haggling. Go in the morning for the most authentic experience.", tags: [{t:"tip",l:"Go in the morning"},{t:"neutral",l:"Souvenirs & street food"}] },
+      { name: "Namsan & N Seoul Tower", kr: "남산 · N서울타워", icon: "ti-mountain", maps: "남산타워", desc: "Take the cable car up Namsan mountain for panoramic city views. The tower is iconic — go at sunset for the best photos.", tags: [{t:"must",l:"Panoramic views"},{t:"photo",l:"Photo-worthy"},{t:"tip",l:"Go at sunset"}] },
+      { name: "Euljiro", kr: "을지로", icon: "ti-bulb", maps: "을지로", desc: "Industrial print shops and ironworks by day, a buzzing craft beer and vintage bar scene by night. The best of old and new Seoul in one neighbourhood.", tags: [{t:"tip",l:"Cool bar scene"},{t:"neutral",l:"Best after dark"}] },
+    ],
+    restaurants: [
+      { name: "Myeongdong Kyoja", kr: "명동교자", icon: "ti-tools-kitchen-2", maps: "명동교자 본점", desc: "Legendary knife-cut noodle soup (kalguksu). Cash only, always a queue outside — and absolutely worth the wait.", tags: [{t:"must",l:"Legendary"},{t:"warn",l:"Long queues"},{t:"neutral",l:"Cash only"}] },
+      { name: "Myeongdong street food alley", kr: "명동 길거리 음식", icon: "ti-tools-kitchen-2", maps: "명동 길거리 음식", desc: "Tornado potato, egg bread (gyeran-bbang), tteokbokki, cheese corn dogs — quintessential Seoul street food at its most concentrated.", tags: [{t:"must",l:"Street food heaven"},{t:"photo",l:"Photo-worthy"}] },
+    ],
+    cafes: [
+      { name: "Café Bora", kr: "카페 보라", icon: "ti-coffee", maps: "카페보라 인사동", desc: "Famous for its deep purple charcoal soft serve and striking visual aesthetic. Very popular with visitors.", tags: [{t:"photo",l:"Photo-worthy"},{t:"neutral",l:"Purple soft serve"}] },
+    ]
+  },
+
+  yongsan: {
+    name: "Yongsan", nameKr: "용산", color: "#534AB7", note: null,
+    attractions: [
+      { name: "National Museum of Korea", kr: "국립중앙박물관", icon: "ti-building-museum", maps: "국립중앙박물관", desc: "The largest museum in Korea — vast and genuinely world-class. Allow at least 3 hours. Free permanent collection; the outdoor garden is also beautiful.", tags: [{t:"must",l:"Must-see"},{t:"tip",l:"Free admission"},{t:"neutral",l:"Allow 3+ hours"}] },
+      { name: "Leeum Museum of Art", kr: "리움미술관", icon: "ti-palette", maps: "리움미술관", desc: "Arguably Seoul's finest private art museum. Three striking buildings by Mario Botta, Jean Nouvel, and Rem Koolhaas — home to superb Korean art spanning ancient ceramics to cutting-edge contemporary work.", tags: [{t:"must",l:"Art + architecture"},{t:"photo",l:"Photo-worthy"},{t:"tip",l:"World-class"}] },
+      { name: "Itaewon Antique Furniture Street", kr: "이태원 앤틱 가구 거리", icon: "ti-armchair", maps: "이태원 앤틱 가구거리", desc: "A fascinating stretch of antique and vintage furniture shops running through Itaewon — one of the only places in Seoul to browse genuine antiques, Korean folk pieces, and imported curiosities. Great for window shopping even if you're not buying.", tags: [{t:"neutral",l:"Antiques & vintage"},{t:"tip",l:"Unique to Seoul"}] },
+      { name: "Itaewon", kr: "이태원", icon: "ti-globe", maps: "이태원", desc: "Seoul's most international neighbourhood. Excellent for diverse dining (Middle Eastern, Mexican, Indian, and more), with a vibrant bar and nightlife scene.", tags: [{t:"neutral",l:"International vibe"},{t:"tip",l:"Great for non-Korean food"}] },
+      { name: "Hannam-dong", kr: "한남동", icon: "ti-walk", maps: "한남동", desc: "Upscale neighbourhood adjacent to Itaewon — independent boutiques, design galleries, excellent coffee, and a more relaxed pace than Gangnam.", tags: [{t:"tip",l:"Underrated gem"},{t:"neutral",l:"Boutiques & design"}] },
+      { name: "Yongnidan-gil", kr: "용리단길", icon: "ti-walk", maps: "용리단길", desc: "A trendy street lined with independent restaurants, wine bars, and specialty coffee shops — a more local alternative to Itaewon.", tags: [{t:"neutral",l:"Local restaurant strip"},{t:"tip",l:"Less touristy"}] },
+    ],
+    restaurants: [
+      { name: "Namyeongdon (남영돈) — pork collar BBQ", kr: "남영돈", icon: "ti-tools-kitchen-2", maps: "남영돈 용산", desc: "A standout pork BBQ restaurant near Namyeong station, specialising in gabi-sal (pork collar). Right in the heart of the Namyeong-dong restaurant strip.", tags: [{t:"jin",l:"Local pick"},{t:"must",l:"Must-try"},{t:"neutral",l:"Pork BBQ"}], jin: true },
+      { name: "Gamasot Jokbal & Sundae-guk", kr: "가마솥족발순대국", icon: "ti-soup", maps: "가마솥족발순대국 용산", desc: "A local institution near Namyeong — hearty jokbal (braised pork trotters) and sundae-guk (blood sausage soup). Add extra chives (부추 추가 필수!).", tags: [{t:"jin",l:"Local pick"},{t:"tip",l:"Add extra chives!"},{t:"neutral",l:"Local institution"}], jin: true },
+      { name: "Oilje", kr: "오일제", icon: "ti-soup", maps: "오일제 용산", desc: "A reservation-essential restaurant near Namyeong known for its extraordinary perilla-seaweed soup (들깨미역국). Quietly beloved by Seoul food lovers.", tags: [{t:"jin",l:"Local pick"},{t:"warn",l:"Reservation essential"},{t:"tip",l:"Hidden gem"}], jin: true },
+      { name: "Gongi", kr: "Gongi 이태원", icon: "ti-tools-kitchen-2", maps: "Gongi 이태원", desc: "A modern Korean dining spot in Itaewon with a creative, seasonal menu — well-regarded for both lunch and dinner.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Modern Korean"}], jin: true },
+      { name: "Itaewon international food street", kr: "이태원 세계음식 거리", icon: "ti-tools-kitchen-2", maps: "이태원 세계음식", desc: "If anyone in the group doesn't eat Korean food, Itaewon is the answer — genuine halal, vegetarian, and international options from across the world.", tags: [{t:"tip",l:"Non-Korean options"},{t:"neutral",l:"Halal & vegetarian-friendly"}] },
+    ],
+    cafes: [
+      { name: "Anthracite Hannam", kr: "앤스러사이트 한남", icon: "ti-coffee", maps: "앤스러사이트 한남", desc: "Excellent single-origin coffee inside a beautifully converted factory space. One of Seoul's most loved specialty roasters.", tags: [{t:"tip",l:"Specialty roaster"},{t:"photo",l:"Photo-worthy"}] },
+      { name: "Auf Glatt Hannam", kr: "아우프글렛 한남", icon: "ti-coffee", maps: "아우프글렛 한남", desc: "A well-loved specialty coffee shop in Hannam-dong with a cosy, refined atmosphere.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Specialty coffee"}], jin: true },
+      { name: "Itsuke Wonhyo-ro", kr: "잇케", icon: "ti-coffee", maps: "잇케 용산", desc: "A charming small café in the Wonhyo-ro strip — part of the emerging Namyeong café cluster.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Neighbourhood café"}], jin: true },
+      { name: "Ohayo Donut", kr: "오하요 도넛", icon: "ti-coffee", maps: "오하요 도넛 용산", desc: "Japanese-style fluffy donuts on the Wonhyo-ro strip — a local favourite for a quick sweet break.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Japanese-style donuts"}], jin: true },
+      { name: "Morpe Coffee", kr: "모르페커피", icon: "ti-coffee", maps: "모르페커피 용산", desc: "A specialty coffee roaster on the Wonhyo-ro café strip — excellent espresso in a clean, minimalist space.", tags: [{t:"jin",l:"Local pick"},{t:"tip",l:"Specialty roaster"}], jin: true },
+    ]
+  },
+
+  hongdae: {
+    name: "Hongdae", nameKr: "홍대", color: "#993556", note: null,
+    attractions: [
+      { name: "Hongdae Street & art scene", kr: "홍대 거리", icon: "ti-palette", maps: "홍대 거리", desc: "Seoul's creative hub, centred around Hongik University — street performances, indie music, murals, pop-up markets, and a youthful energy unlike anywhere else in the city.", tags: [{t:"must",l:"Must-see"},{t:"photo",l:"Photo-worthy"},{t:"neutral",l:"Street performances"}] },
+      { name: "Fun fact: the 'Hongdae boy'", kr: "홍대 앞 동상", icon: "ti-star", maps: "홍대입구 동상", desc: "The famous bronze statue near Hongdae entrance is the universally known meeting point for young Seoulites — every local knows it as the first landmark of the neighbourhood.", tags: [{t:"neutral",l:"Local landmark"},{t:"photo",l:"Photo-worthy"}] },
+      { name: "Mangwon-dong", kr: "망원동", icon: "ti-walk", maps: "망원동", desc: "A 20-minute walk west of Hongdae. Beloved for cosy independent cafés, vintage shops, and a laid-back residential feel. Much less touristy than Hongdae itself.", tags: [{t:"tip",l:"Local favourite"},{t:"neutral",l:"Vintage & indie cafés"}] },
+      { name: "Mangwon Hangang Park", kr: "망원한강공원", icon: "ti-trees", maps: "망원한강공원", desc: "Wide riverside park great for cycling, picnicking, and watching the Han River. Rent bikes here. Convenience store fried chicken by the river is a quintessential Seoul experience.", tags: [{t:"neutral",l:"Riverside park"},{t:"photo",l:"Photo-worthy"},{t:"tip",l:"Rent a bike"}] },
+    ],
+    restaurants: [
+      { name: "Okdong-sik", kr: "옥동식", icon: "ti-tools-kitchen-2", maps: "옥동식 마포", desc: "One of Seoul's most acclaimed restaurants — elevated Korean home cooking served in a beautiful, considered space. Book well ahead.", tags: [{t:"jin",l:"Local pick"},{t:"must",l:"Must-try"},{t:"warn",l:"Book well ahead"}], jin: true },
+      { name: "Nishimura Men Yeonnam", kr: "니시무라멘 연남본점", icon: "ti-tools-kitchen-2", maps: "니시무라멘 연남", desc: "A much-loved ramen restaurant in Yeonnam-dong, just east of Hongdae — rich broths and carefully crafted noodles.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Japanese ramen"}], jin: true },
+      { name: "Itsmo Ramen", kr: "이츠모라멘", icon: "ti-tools-kitchen-2", maps: "이츠모라멘 홍대", desc: "A tonkotsu ramen specialist near Hongdae — rich, creamy broth and generous toppings.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Tonkotsu ramen"}], jin: true },
+      { name: "Gosun Handmade Dumplings Mangwon", kr: "고손수제군만두 망원", icon: "ti-tools-kitchen-2", maps: "고손수제군만두 망원", desc: "Pan-fried handmade dumplings in Mangwon — crispy, comforting, and very popular with locals.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Pan-fried dumplings"}], jin: true },
+      { name: "Mangwon Market", kr: "망원시장", icon: "ti-tools-kitchen-2", maps: "망원시장", desc: "A genuine neighbourhood market, much quieter than Gwangjang. Great for tteok (rice cakes), bindaetteok, and fresh produce.", tags: [{t:"tip",l:"Very local"},{t:"neutral",l:"Traditional market"}] },
+    ],
+    cafes: [
+      { name: "Old Ferry Donut — Yeonnam branch", kr: "올드페리도넛 연남점", icon: "ti-coffee", maps: "올드페리도넛 연남점", desc: "Seoul's most beloved artisan donut shop. Expect queues and expect to love every bite.", tags: [{t:"jin",l:"Local pick"},{t:"must",l:"Iconic"},{t:"warn",l:"Queues expected"}], jin: true },
+      { name: "Rowingcoffee", kr: "로잉커피", icon: "ti-coffee", maps: "로잉커피 마포", desc: "A well-regarded specialty coffee spot in the Mangwon area — clean, focused, and excellent.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Specialty coffee"}], jin: true },
+      { name: "Turtle Hip — Yeonnam", kr: "터틀힙 연남", icon: "ti-coffee", maps: "터틀힙 연남", desc: "A popular café in Yeonnam-dong with a lovely space and good coffee — great spot to rest between Hongdae and the park.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Yeonnam café"}], jin: true },
+      { name: "Beans Brothers Coffee Seoul", kr: "빈브라더스 커피하우스 서울", icon: "ti-coffee", maps: "빈브라더스 합정", desc: "A well-known Seoul specialty roaster with a café offering great river views from the Hapjeong/Mapo area.", tags: [{t:"jin",l:"Local pick"},{t:"photo",l:"River view"},{t:"neutral",l:"Specialty roaster"}], jin: true },
+    ]
+  },
+
+  seongsu: {
+    name: "Seongsu", nameKr: "성수동", color: "#BA7517",
+    note: "Seongsu is an easy and natural extension of a Jamsil day — Ttukseom Hangang Park sits between the two areas, and Seoul Forest is a short walk further. The neighbourhood feels very different from the rest of Seoul: industrial, creative, and authentically cool without being touristy.",
+    attractions: [
+      { name: "Ttukseom Hangang Park", kr: "뚝섬한강공원", icon: "ti-trees", maps: "뚝섬한강공원", desc: "One of the most popular Han River parks — wide grassy lawns, riverside cafés, cycling paths, and an outdoor pool in summer. Perfect for a golden-hour picnic or sunset watch.", tags: [{t:"must",l:"Sunset views"},{t:"photo",l:"Photo-worthy"},{t:"tip",l:"Rent a bike"}] },
+      { name: "Seoul Forest", kr: "서울숲", icon: "ti-trees", maps: "서울숲", desc: "A spacious urban park with deer, a butterfly garden, wetlands, and open meadows. Beautifully maintained and far less crowded than the riverside parks. October is a great time to visit as the trees turn.", tags: [{t:"must",l:"Must-visit"},{t:"photo",l:"Photo-worthy"},{t:"tip",l:"Lovely in October"}] },
+      { name: "Seongsu-dong café street", kr: "성수동 카페거리", icon: "ti-walk", maps: "성수동 카페거리", desc: "A stretch of converted factory and warehouse buildings now home to Seoul's coolest independent cafés, pop-up stores, and boutiques. The aesthetic is industrial-chic — think exposed brick, skylights, and espresso.", tags: [{t:"must",l:"Must-see"},{t:"photo",l:"Photo-worthy"},{t:"neutral",l:"Industrial-chic"}] },
+      { name: "Seongsu Federation Space", kr: "성수연방공간플랫폼", icon: "ti-building-store", maps: "성수연방 성수동", desc: "A curated platform of small independent shops and creative studios inside a converted space — a great introduction to the Seongsu indie scene.", tags: [{t:"tip",l:"Indie shopping"},{t:"neutral",l:"Creative hub"}] },
+    ],
+    restaurants: [
+      { name: "Charcoal Dakgalbi Gyejarim", kr: "숯불닭갈비 계자람 성수본점", icon: "ti-tools-kitchen-2", maps: "숯불닭갈비 계자람 성수", desc: "A standout charcoal-grilled dakgalbi (spicy chicken) restaurant in Seongsu — smoky, flavourful, and very satisfying.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Charcoal dakgalbi"}], jin: true },
+      { name: "Neungdong Minari Seongsu", kr: "능동미나리 성수점", icon: "ti-tools-kitchen-2", maps: "능동미나리 성수", desc: "A beloved pork and minari (water parsley) hot pot restaurant — a warming, sociable meal that's perfect for a group.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Pork hot pot"}], jin: true },
+      { name: "Jojo Kalguksu Seongsu", kr: "조조칼국수 성수점", icon: "ti-soup", maps: "조조칼국수 성수", desc: "A popular knife-cut noodle soup spot in Seongsu — comforting, affordable, and full of local regulars.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Knife-cut noodles"}], jin: true },
+    ],
+    cafes: [
+      { name: "Patisserie Fruits", kr: "파티세리후르츠", icon: "ti-coffee", maps: "파티세리후르츠 성수", desc: "A beautiful patisserie in Seongsu known for its seasonal fruit tarts and elegant desserts — one of the prettier spots on the café street.", tags: [{t:"jin",l:"Local pick"},{t:"photo",l:"Photo-worthy"},{t:"neutral",l:"Fruit tarts & pastries"}], jin: true },
+      { name: "On The (온더)", kr: "온더", icon: "ti-coffee", maps: "온더 성수", desc: "A distinctive café in the Seongsu industrial district — spacious, well-designed, and popular with the creative crowd.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Spacious & cool"}], jin: true },
+      { name: "Seongsu café street — general", kr: "성수동 카페거리", icon: "ti-coffee", maps: "성수동 카페", desc: "Beyond the picks above, the entire street rewards wandering — new and interesting cafés open constantly. Just walk and follow whichever queue looks most promising.", tags: [{t:"tip",l:"Explore freely"},{t:"neutral",l:"New spots weekly"}] },
+    ]
+  },
+
+  gangnam: {
+    name: "Gangnam", nameKr: "강남", color: "#5F5E5A",
+    note: "Gangnam is worth a brief visit for its cultural cachet (yes, that Gangnam Style) but it's not the most rewarding area for sightseeing or food. Evening action is mostly clubs and upscale bars — best saved for late nights rather than used as a full-day destination.",
+    attractions: [
+      { name: "Sinnonhyeon–Gangnam shopping boulevard", kr: "신논현역 → 강남역 대로", icon: "ti-shopping-bag", maps: "강남역 쇼핑", desc: "A broad, glitzy avenue lined with flagship stores, beauty brands, and contemporary architecture. A 30–60 minute walk gives you the full 'Gangnam style' experience.", tags: [{t:"neutral",l:"Shopping boulevard"},{t:"tip",l:"30–60 min is enough"}] },
+      { name: "COEX Mall", kr: "코엑스몰", icon: "ti-building-store", maps: "COEX Mall", desc: "A vast underground mall with Starfield Library, an aquarium, cinema, and endless shops. Allow 2–3 hours. Warning: it is genuinely labyrinthine — even locals get lost. Download the mall map before you go, and expect very large crowds on weekends.", tags: [{t:"warn",l:"Very easy to get lost"},{t:"warn",l:"Very crowded"},{t:"tip",l:"Download map first"}] },
+      { name: "Starfield Library (inside COEX)", kr: "별마당 도서관", icon: "ti-books", maps: "별마당 도서관", desc: "A breathtaking open library with floor-to-ceiling bookshelves rising several storeys. Free to enter inside COEX — one of the most photogenic spots in the city.", tags: [{t:"must",l:"Photo-worthy"},{t:"tip",l:"Free entry"},{t:"photo",l:"Very Instagrammable"}] },
+    ],
+    restaurants: [
+      { name: "Gangseomyeonok Apgujeong", kr: "강서면옥 압구정점", icon: "ti-soup", maps: "강서면옥 압구정", desc: "A respected naengmyeon (cold noodle) and Korean BBQ restaurant in Apgujeong — a reliable, satisfying meal in the Gangnam area.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Cold noodles & BBQ"}], jin: true },
+      { name: "Muatan", kr: "무탄", icon: "ti-tools-kitchen-2", maps: "무탄 강남", desc: "A well-regarded modern Korean restaurant in Nonhyeon with a creative seasonal menu.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Modern Korean"}], jin: true },
+      { name: "Apgujeong Rodeo Street", kr: "압구정 로데오 거리", icon: "ti-tools-kitchen-2", maps: "압구정 로데오", desc: "A short taxi ride from Gangnam station — much better dining and café scene than Gangnam proper, with boutiques and a more curated atmosphere.", tags: [{t:"tip",l:"Better food scene"},{t:"neutral",l:"Short taxi ride"}] },
+    ],
+    cafes: [
+      { name: "Sesicella Dosan Park", kr: "세시셀라 도산공원점", icon: "ti-coffee", maps: "세시셀라 도산공원", desc: "A lovely café near Dosan Park in Apgujeong — elegant space, good pastries, popular for afternoon coffee.", tags: [{t:"jin",l:"Local pick"},{t:"photo",l:"Photo-worthy"}], jin: true },
+      { name: "Old Ferry Donut — Garosu-gil", kr: "올드페리도넛 가로수길점", icon: "ti-coffee", maps: "올드페리도넛 가로수길", desc: "The Garosu-gil branch of Seoul's most beloved artisan donut shop — convenient if you're exploring the Apgujeong area.", tags: [{t:"jin",l:"Local pick"},{t:"must",l:"Iconic"}], jin: true },
+      { name: "Café inside Starfield Library", kr: "별마당 카페", icon: "ti-coffee", maps: "별마당 도서관 카페", desc: "Sit inside the library atrium with a coffee — the atmosphere is genuinely unlike anywhere else in Seoul.", tags: [{t:"tip",l:"Unique atmosphere"},{t:"photo",l:"Photo-worthy"}] },
+    ]
+  },
+
+  jamsil: {
+    name: "Jamsil", nameKr: "잠실", color: "#0F6E56", note: null,
+    attractions: [
+      { name: "Lotte World", kr: "롯데월드", icon: "ti-roller-skating", maps: "롯데월드", desc: "One of the world's largest indoor theme parks, plus the outdoor Magic Island section on a lake. Great fun for all ages — buy tickets online in advance to skip the box office queue.", tags: [{t:"must",l:"Great for fun"},{t:"photo",l:"Photo-worthy"},{t:"tip",l:"Buy tickets online"}] },
+      { name: "Lotte World Tower", kr: "롯데월드타워", icon: "ti-building-skyscraper", maps: "롯데월드타워 서울스카이", desc: "One of the five tallest buildings in the world. The Seoul Sky Observatory (floors 117–123) offers breathtaking 360° views. The glass-floored section is not for the faint-hearted.", tags: [{t:"must",l:"Stunning views"},{t:"photo",l:"Photo-worthy"},{t:"warn",l:"Not for vertigo"}] },
+      { name: "Seokchon Lake Park", kr: "석촌호수", icon: "ti-trees", maps: "석촌호수", desc: "A peaceful lake park right alongside Lotte World — beautiful in October as the leaves begin to turn. A lovely free afternoon stroll between the tower and the theme park.", tags: [{t:"tip",l:"Lovely in October"},{t:"photo",l:"Autumn colours"},{t:"neutral",l:"Free & relaxing"}] },
+      { name: "Songridan-gil", kr: "송리단길", icon: "ti-walk", maps: "송리단길", desc: "A trendy restaurant and café street in Jamsil — a more relaxed alternative to the Lotte complex, with charming independent spots.", tags: [{t:"neutral",l:"Cafés & restaurants"},{t:"tip",l:"Less touristy"}] },
+      { name: "Olympic Park", kr: "올림픽공원", icon: "ti-stadium", maps: "올림픽공원", desc: "Built for the 1988 Seoul Olympics — a huge park with open lawns, sculptures, and the famous lone Mongolian oak tree (나홀로나무) that's become a beloved social media spot.", tags: [{t:"neutral",l:"Outdoor space"},{t:"photo",l:"Photo-worthy"},{t:"tip",l:"Historic site"}] },
+    ],
+    restaurants: [
+      { name: "Downtooner Jamsil", kr: "다운타우너 잠실점", icon: "ti-tools-kitchen-2", maps: "다운타우너 잠실", desc: "One of Seoul's best smash burger joints — juicy, unpretentious, and very popular. Great after a day at Lotte World.", tags: [{t:"jin",l:"Local pick"},{t:"must",l:"Best burger in Seoul"}], jin: true },
+      { name: "Manjok Ohyang Jokbal — Jamsil branch", kr: "만족오향족발 잠실신천점", icon: "ti-tools-kitchen-2", maps: "만족오향족발 잠실신천", desc: "A famous braised pork trotters (jokbal) restaurant with multiple Seoul branches — the Jamsil location is consistently excellent.", tags: [{t:"jin",l:"Local pick"},{t:"must",l:"Famous jokbal"}], jin: true },
+      { name: "Mongchon Dakgalbi", kr: "몽촌 닭갈비", icon: "ti-tools-kitchen-2", maps: "몽촌 닭갈비 잠실", desc: "A great spicy stir-fried chicken (dakgalbi) restaurant near Seokchon Lake — solid and satisfying after a day at Lotte.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Spicy stir-fried chicken"}], jin: true },
+      { name: "Arari Hanjeongsik", kr: "아라리 한정식", icon: "ti-soup", maps: "아라리 한정식 잠실", desc: "A full Korean traditional set meal (hanjeongsik) near Olympic Park — an impressive, celebratory spread for a special dinner.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Korean traditional set"}], jin: true },
+    ],
+    cafes: [
+      { name: "Quiet Cream Tea", kr: "콰이어트 크림티", icon: "ti-coffee", maps: "콰이어트 크림티 송파", desc: "A delightful British-style cream tea café in Samjeon-dong — scones, clotted cream, and lovely teas in a genuinely cosy space.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Scones & cream tea"},{t:"tip",l:"Unique experience"}], jin: true },
+      { name: "Creamu Loving Club", kr: "크레뮤 러빙 클럽", icon: "ti-coffee", maps: "크레뮤 러빙 클럽 잠실", desc: "A popular café near Songridan-gil specialising in soft cream desserts — a lovely stop on the Jamsil café trail.", tags: [{t:"jin",l:"Local pick"},{t:"neutral",l:"Soft cream desserts"}], jin: true },
+      { name: "Han River view cafés", kr: "한강 뷰 카페", icon: "ti-coffee", maps: "잠실 한강뷰 카페", desc: "Several cafés along the Jamsil riverfront offer views of the Han River — especially atmospheric at sunset.", tags: [{t:"tip",l:"Sunset views"},{t:"photo",l:"Photo-worthy"}] },
+    ]
+  }
+};
+
+const tabLabels = { attractions: "Sights", restaurants: "Food", cafes: "Cafés" };
+let currentZone = null;
+let currentTab = 'attractions';
+const tagClass = { must:'tag-must', tip:'tag-tip', warn:'tag-warn', photo:'tag-photo', neutral:'tag-neutral', jin:'tag-jin' };
+
+const placeMeta = {
+  "Gyeongbokgung Palace": {
+    "time": "90–150 min",
+    "transport": {
+      "icons": [
+        "3"
+      ],
+      "station": "Gyeongbokgung"
+    }
+  },
+  "Changgyeonggung Palace": {
+    "time": "75–120 min",
+    "transport": {
+      "icons": [
+        "4",
+        "walk"
+      ],
+      "station": "Hyehwa + walk"
+    }
+  },
+  "Bukchon Hanok Village": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "3",
+        "walk"
+      ],
+      "station": "Anguk + walk"
+    }
+  },
+  "Baekin-je House": {
+    "time": "30–45 min",
+    "transport": {
+      "icons": [
+        "3",
+        "walk"
+      ],
+      "station": "Anguk + walk"
+    }
+  },
+  "Seosunna-gil": {
+    "time": "45–90 min",
+    "transport": {
+      "icons": [
+        "1",
+        "3",
+        "5"
+      ],
+      "station": "Jongno 3-ga"
+    }
+  },
+  "Samcheongdong Street": {
+    "time": "45–75 min",
+    "transport": {
+      "icons": [
+        "3",
+        "walk"
+      ],
+      "station": "Anguk + walk"
+    }
+  },
+  "National Museum of Modern & Contemporary Art (MMCA)": {
+    "time": "90–150 min",
+    "transport": {
+      "icons": [
+        "3",
+        "walk"
+      ],
+      "station": "Anguk/Gyeongbokgung"
+    }
+  },
+  "Jogyesa Temple": {
+    "time": "20–40 min",
+    "transport": {
+      "icons": [
+        "1",
+        "walk"
+      ],
+      "station": "Jonggak + walk"
+    }
+  },
+  "Insadong": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "3",
+        "walk"
+      ],
+      "station": "Anguk + walk"
+    }
+  },
+  "Yoollin Songkhyun Green Plaza": {
+    "time": "20–40 min",
+    "transport": {
+      "icons": [
+        "3",
+        "walk"
+      ],
+      "station": "Anguk + walk"
+    }
+  },
+  "Tosokchon Samgyetang": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "3"
+      ],
+      "station": "Gyeongbokgung"
+    },
+    "cuisine": "Korean · samgyetang / ginseng chicken soup"
+  },
+  "Gwangjang Market": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "1"
+      ],
+      "station": "Jongno 5-ga"
+    },
+    "cuisine": "Korean market food · pancakes, gimbap, street snacks",
+    "redFlag": "Some stalls sell raw or fermented seafood. For Karen, stick to bindaetteok, mayak gimbap, dumplings, or noodles."
+  },
+  "Siminsikhang": {
+    "time": "45–70 min",
+    "transport": {
+      "icons": [
+        "1",
+        "walk"
+      ],
+      "station": "Jonggak/Jongno"
+    },
+    "cuisine": "Korean · local set meals"
+  },
+  "Jaha Handmade Mandu": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "taxi"
+      ],
+      "station": "Taxi recommended"
+    },
+    "cuisine": "Korean · handmade mandu dumplings"
+  },
+  "Jongno 3-ga street stall alley": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "1",
+        "3",
+        "5"
+      ],
+      "station": "Jongno 3-ga"
+    },
+    "cuisine": "Korean pojangmacha · late-night street food",
+    "redFlag": "Crowded, smoky, drinking-focused, and mostly stools/outdoor seating. Better for adventurous evening visitors than for Karen."
+  },
+  "Café Onion Anguk": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "3"
+      ],
+      "station": "Anguk"
+    }
+  },
+  "Gallery The Square — tea omakase": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "3",
+        "walk"
+      ],
+      "station": "Anguk + walk"
+    }
+  },
+  "Jaiso Anguk": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "3"
+      ],
+      "station": "Anguk"
+    }
+  },
+  "Dawon Traditional Tea House": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "3",
+        "walk"
+      ],
+      "station": "Anguk + walk"
+    }
+  },
+  "Dongdaemun Design Plaza (DDP)": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "2",
+        "4",
+        "5"
+      ],
+      "station": "DDP Station"
+    }
+  },
+  "Dongdaemun History & Culture Park": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "2",
+        "4",
+        "5"
+      ],
+      "station": "DDP Station"
+    }
+  },
+  "Heunginjimun Gate (East Gate)": {
+    "time": "20–40 min",
+    "transport": {
+      "icons": [
+        "1",
+        "4"
+      ],
+      "station": "Dongdaemun"
+    }
+  },
+  "Dongdaemun shopping district": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "2",
+        "4",
+        "5"
+      ],
+      "station": "DDP Station"
+    }
+  },
+  "King Handmade Mandu": {
+    "time": "45–70 min",
+    "transport": {
+      "icons": [
+        "1",
+        "6"
+      ],
+      "station": "Dongmyo"
+    },
+    "cuisine": "Korean-Chinese · handmade dumplings"
+  },
+  "Sungcheon Makguksu": {
+    "time": "45–70 min",
+    "transport": {
+      "icons": [
+        "5",
+        "taxi"
+      ],
+      "station": "Dapsimni + short taxi"
+    },
+    "cuisine": "Korean · buckwheat noodles / makguksu"
+  },
+  "JW Marriott Dongdaemun — café & desserts": {
+    "time": "45–75 min",
+    "transport": {
+      "icons": [
+        "1",
+        "4"
+      ],
+      "station": "Dongdaemun"
+    }
+  },
+  "Deoksugung Palace": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "1",
+        "2"
+      ],
+      "station": "City Hall"
+    }
+  },
+  "Seoul Museum of Art (SeMA)": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "1",
+        "2"
+      ],
+      "station": "City Hall"
+    }
+  },
+  "Piknic": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "4",
+        "walk"
+      ],
+      "station": "Hoehyeon + walk"
+    }
+  },
+  "Cheonggyecheon Stream": {
+    "time": "30–90 min",
+    "transport": {
+      "icons": [
+        "1",
+        "walk"
+      ],
+      "station": "Jonggak/City Hall"
+    }
+  },
+  "Myeongdong to Cathedral walk": {
+    "time": "45–75 min",
+    "transport": {
+      "icons": [
+        "4",
+        "walk"
+      ],
+      "station": "Myeongdong"
+    }
+  },
+  "Namdaemun Market": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "4"
+      ],
+      "station": "Hoehyeon"
+    }
+  },
+  "Namsan & N Seoul Tower": {
+    "time": "90–150 min",
+    "transport": {
+      "icons": [
+        "4",
+        "cable"
+      ],
+      "station": "Myeongdong + cable car"
+    }
+  },
+  "Euljiro": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "2",
+        "3"
+      ],
+      "station": "Euljiro 3-ga"
+    }
+  },
+  "Myeongdong Kyoja": {
+    "time": "45–75 min",
+    "transport": {
+      "icons": [
+        "4"
+      ],
+      "station": "Myeongdong"
+    },
+    "cuisine": "Korean · kalguksu noodles and mandu"
+  },
+  "Myeongdong street food alley": {
+    "time": "45–75 min",
+    "transport": {
+      "icons": [
+        "4",
+        "walk"
+      ],
+      "station": "Myeongdong"
+    },
+    "cuisine": "Korean street food · snacks and sweets"
+  },
+  "Café Bora": {
+    "time": "30–45 min",
+    "transport": {
+      "icons": [
+        "3",
+        "walk"
+      ],
+      "station": "Anguk/Insadong"
+    }
+  },
+  "National Museum of Korea": {
+    "time": "2.5–4 hr",
+    "transport": {
+      "icons": [
+        "4",
+        "gj"
+      ],
+      "station": "Ichon"
+    }
+  },
+  "Leeum Museum of Art": {
+    "time": "90–150 min",
+    "transport": {
+      "icons": [
+        "6"
+      ],
+      "station": "Hangangjin"
+    }
+  },
+  "Itaewon Antique Furniture Street": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "6",
+        "walk"
+      ],
+      "station": "Itaewon"
+    }
+  },
+  "Itaewon": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "6"
+      ],
+      "station": "Itaewon"
+    }
+  },
+  "Hannam-dong": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "taxi"
+      ],
+      "station": "Taxi recommended"
+    }
+  },
+  "Yongnidan-gil": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "4",
+        "walk"
+      ],
+      "station": "Sinyongsan"
+    }
+  },
+  "Namyeongdon (남영돈) — pork collar BBQ": {
+    "time": "75–120 min",
+    "transport": {
+      "icons": [
+        "1",
+        "4"
+      ],
+      "station": "Namyeong/Sookmyung"
+    },
+    "cuisine": "Korean BBQ · pork collar"
+  },
+  "Gamasot Jokbal & Sundae-guk": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "1",
+        "4"
+      ],
+      "station": "Namyeong/Sookmyung"
+    },
+    "cuisine": "Korean · jokbal and sundae-guk",
+    "redFlag": "Strong Karen red flag: sundae is blood sausage and the soup may include offal/intestines. Skip if sensitive to organ meats or strong pork broth."
+  },
+  "Oilje": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "1",
+        "4"
+      ],
+      "station": "Namyeong/Sookmyung"
+    },
+    "cuisine": "Korean · perilla seaweed soup"
+  },
+  "Gongi": {
+    "time": "75–120 min",
+    "transport": {
+      "icons": [
+        "6"
+      ],
+      "station": "Itaewon/Hangangjin"
+    },
+    "cuisine": "Modern Korean · seasonal dining"
+  },
+  "Itaewon international food street": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "6"
+      ],
+      "station": "Itaewon"
+    },
+    "cuisine": "International · halal, vegetarian, Middle Eastern, Mexican, Indian"
+  },
+  "Anthracite Hannam": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "6",
+        "walk"
+      ],
+      "station": "Hangangjin + walk"
+    }
+  },
+  "Auf Glatt Hannam": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "6",
+        "walk"
+      ],
+      "station": "Hangangjin + walk"
+    }
+  },
+  "Itsuke Wonhyo-ro": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "1",
+        "4"
+      ],
+      "station": "Namyeong/Sinyongsan"
+    }
+  },
+  "Ohayo Donut": {
+    "time": "20–40 min",
+    "transport": {
+      "icons": [
+        "1",
+        "4"
+      ],
+      "station": "Namyeong/Sinyongsan"
+    }
+  },
+  "Morpe Coffee": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "1",
+        "4"
+      ],
+      "station": "Namyeong/Sinyongsan"
+    }
+  },
+  "Hongdae Street & art scene": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "2",
+        "airport",
+        "gj"
+      ],
+      "station": "Hongik Univ."
+    }
+  },
+  "Fun fact: the 'Hongdae boy'": {
+    "time": "5–10 min",
+    "transport": {
+      "icons": [
+        "2",
+        "airport",
+        "gj"
+      ],
+      "station": "Hongik Univ."
+    }
+  },
+  "Mangwon-dong": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "6"
+      ],
+      "station": "Mangwon"
+    }
+  },
+  "Mangwon Hangang Park": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "6",
+        "walk"
+      ],
+      "station": "Mangwon + walk"
+    }
+  },
+  "Okdong-sik": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "2",
+        "6"
+      ],
+      "station": "Hapjeong/Sangsu"
+    },
+    "cuisine": "Korean · elevated pork gomtang / home cooking"
+  },
+  "Nishimura Men Yeonnam": {
+    "time": "45–75 min",
+    "transport": {
+      "icons": [
+        "2",
+        "airport",
+        "gj"
+      ],
+      "station": "Hongik Univ."
+    },
+    "cuisine": "Japanese · ramen"
+  },
+  "Itsmo Ramen": {
+    "time": "45–75 min",
+    "transport": {
+      "icons": [
+        "2",
+        "airport",
+        "gj"
+      ],
+      "station": "Hongik Univ."
+    },
+    "cuisine": "Japanese · tonkotsu ramen"
+  },
+  "Gosun Handmade Dumplings Mangwon": {
+    "time": "45–70 min",
+    "transport": {
+      "icons": [
+        "6"
+      ],
+      "station": "Mangwon"
+    },
+    "cuisine": "Korean-Chinese · pan-fried dumplings"
+  },
+  "Mangwon Market": {
+    "time": "45–90 min",
+    "transport": {
+      "icons": [
+        "6"
+      ],
+      "station": "Mangwon"
+    },
+    "cuisine": "Korean market food · tteok, pancakes, snacks"
+  },
+  "Old Ferry Donut — Yeonnam branch": {
+    "time": "20–45 min",
+    "transport": {
+      "icons": [
+        "2",
+        "airport",
+        "gj"
+      ],
+      "station": "Hongik Univ."
+    }
+  },
+  "Rowingcoffee": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "6"
+      ],
+      "station": "Mangwon"
+    }
+  },
+  "Turtle Hip — Yeonnam": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "2",
+        "airport",
+        "gj"
+      ],
+      "station": "Hongik Univ."
+    }
+  },
+  "Beans Brothers Coffee Seoul": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "2",
+        "6"
+      ],
+      "station": "Hapjeong"
+    }
+  },
+  "Ttukseom Hangang Park": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "7"
+      ],
+      "station": "Ttukseom Resort"
+    }
+  },
+  "Seoul Forest": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "bundang",
+        "walk"
+      ],
+      "station": "Seoul Forest"
+    }
+  },
+  "Seongsu-dong café street": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "2",
+        "walk"
+      ],
+      "station": "Seongsu"
+    }
+  },
+  "Seongsu Federation Space": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "2",
+        "walk"
+      ],
+      "station": "Seongsu"
+    }
+  },
+  "Charcoal Dakgalbi Gyejarim": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "2"
+      ],
+      "station": "Seongsu"
+    },
+    "cuisine": "Korean · charcoal spicy chicken / dakgalbi",
+    "redFlag": "Usually spicy and smoky. Ask about spice level; not ideal for anyone avoiding heat."
+  },
+  "Neungdong Minari Seongsu": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "2"
+      ],
+      "station": "Seongsu"
+    },
+    "cuisine": "Korean · pork and minari hot pot",
+    "redFlag": "Pork-heavy broth with herbal minari flavour. Not organ meat, but may not suit very cautious eaters."
+  },
+  "Jojo Kalguksu Seongsu": {
+    "time": "45–75 min",
+    "transport": {
+      "icons": [
+        "2"
+      ],
+      "station": "Seongsu"
+    },
+    "cuisine": "Korean · kalguksu knife-cut noodles"
+  },
+  "Patisserie Fruits": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "2"
+      ],
+      "station": "Seongsu"
+    }
+  },
+  "On The (온더)": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "2"
+      ],
+      "station": "Seongsu"
+    }
+  },
+  "Seongsu café street — general": {
+    "time": "45–90 min",
+    "transport": {
+      "icons": [
+        "2",
+        "walk"
+      ],
+      "station": "Seongsu"
+    }
+  },
+  "Sinnonhyeon–Gangnam shopping boulevard": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "2",
+        "9"
+      ],
+      "station": "Gangnam/Sinnonhyeon"
+    }
+  },
+  "COEX Mall": {
+    "time": "2–3 hr",
+    "transport": {
+      "icons": [
+        "2",
+        "9"
+      ],
+      "station": "Samseong/Bongeunsa"
+    }
+  },
+  "Starfield Library (inside COEX)": {
+    "time": "20–45 min",
+    "transport": {
+      "icons": [
+        "2",
+        "9"
+      ],
+      "station": "Samseong/Bongeunsa"
+    }
+  },
+  "Gangseomyeonok Apgujeong": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "3"
+      ],
+      "station": "Apgujeong"
+    },
+    "cuisine": "Korean · naengmyeon and BBQ"
+  },
+  "Muatan": {
+    "time": "75–120 min",
+    "transport": {
+      "icons": [
+        "7",
+        "9"
+      ],
+      "station": "Nonhyeon/Eonju"
+    },
+    "cuisine": "Modern Korean / Korean-Chinese fusion"
+  },
+  "Apgujeong Rodeo Street": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "bundang"
+      ],
+      "station": "Apgujeong Rodeo"
+    },
+    "cuisine": "Multi-cuisine dining area · cafés, Korean, Western, dessert"
+  },
+  "Sesicella Dosan Park": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "3",
+        "taxi"
+      ],
+      "station": "Apgujeong + short taxi"
+    }
+  },
+  "Old Ferry Donut — Garosu-gil": {
+    "time": "20–45 min",
+    "transport": {
+      "icons": [
+        "3"
+      ],
+      "station": "Sinsa"
+    }
+  },
+  "Café inside Starfield Library": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "2",
+        "9"
+      ],
+      "station": "Samseong/Bongeunsa"
+    }
+  },
+  "Lotte World": {
+    "time": "4–6 hr",
+    "transport": {
+      "icons": [
+        "2",
+        "8"
+      ],
+      "station": "Jamsil"
+    }
+  },
+  "Lotte World Tower": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "2",
+        "8"
+      ],
+      "station": "Jamsil"
+    }
+  },
+  "Seokchon Lake Park": {
+    "time": "45–90 min",
+    "transport": {
+      "icons": [
+        "2",
+        "8",
+        "walk"
+      ],
+      "station": "Jamsil + walk"
+    }
+  },
+  "Songridan-gil": {
+    "time": "60–120 min",
+    "transport": {
+      "icons": [
+        "9",
+        "walk"
+      ],
+      "station": "Songpanaru"
+    }
+  },
+  "Olympic Park": {
+    "time": "90–150 min",
+    "transport": {
+      "icons": [
+        "5",
+        "9"
+      ],
+      "station": "Olympic Park"
+    }
+  },
+  "Downtooner Jamsil": {
+    "time": "45–75 min",
+    "transport": {
+      "icons": [
+        "2",
+        "8"
+      ],
+      "station": "Jamsil"
+    },
+    "cuisine": "American-style · smash burgers"
+  },
+  "Manjok Ohyang Jokbal — Jamsil branch": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "2"
+      ],
+      "station": "Jamsilsaenae"
+    },
+    "cuisine": "Korean · jokbal / braised pork trotters",
+    "redFlag": "Pork trotters have a gelatinous skin texture. Good Korean classic, but not the safest Karen pick."
+  },
+  "Mongchon Dakgalbi": {
+    "time": "60–90 min",
+    "transport": {
+      "icons": [
+        "8",
+        "9"
+      ],
+      "station": "Seokchon/Songpanaru"
+    },
+    "cuisine": "Korean · spicy stir-fried chicken / dakgalbi",
+    "redFlag": "Spicy, saucy, and shared-pan style. Ask for mild or skip for spice-sensitive eaters."
+  },
+  "Arari Hanjeongsik": {
+    "time": "90–120 min",
+    "transport": {
+      "icons": [
+        "5",
+        "9"
+      ],
+      "station": "Olympic Park"
+    },
+    "cuisine": "Korean · hanjeongsik traditional set meal"
+  },
+  "Quiet Cream Tea": {
+    "time": "45–75 min",
+    "transport": {
+      "icons": [
+        "9"
+      ],
+      "station": "Samjeon"
+    }
+  },
+  "Creamu Loving Club": {
+    "time": "30–60 min",
+    "transport": {
+      "icons": [
+        "9"
+      ],
+      "station": "Songpanaru"
+    }
+  },
+  "Han River view cafés": {
+    "time": "45–90 min",
+    "transport": {
+      "icons": [
+        "2",
+        "8",
+        "walk"
+      ],
+      "station": "Jamsil + riverside walk"
+    }
+  }
+};
+
+const transportIconLabels = { walk:'Walk', taxi:'Taxi', cable:'Cable', airport:'A', gj:'GJ', bundang:'BD', shinbundang:'SB', u:'U' };
+const transportIconTitles = { walk:'Walk from station', taxi:'Taxi recommended', cable:'Cable car', airport:'Airport Railroad / AREX', gj:'Gyeongui–Jungang Line', bundang:'Suin–Bundang Line', shinbundang:'Shinbundang Line', u:'Ui–Sinseol Line' };
+const modeTransportCodes = new Set(['walk','taxi','cable']);
+const zoneDefaultTransport = {
+  gwanghwamun:{icons:['3'], station:'Anguk/Gyeongbokgung'}, dongdaemun:{icons:['2','4','5'], station:'DDP Station'},
+  myeongdong:{icons:['4'], station:'Myeongdong/City Hall'}, yongsan:{icons:['4','6'], station:'Yongsan/Itaewon area'},
+  hongdae:{icons:['2'], station:'Hongik Univ.'}, seongsu:{icons:['2'], station:'Seongsu'},
+  gangnam:{icons:['2','9'], station:'Gangnam/COEX'}, jamsil:{icons:['2','8'], station:'Jamsil'}
+};
+const defaultTimeByTab = { attractions:'45–90 min', restaurants:'60–90 min', cafes:'30–60 min' };
+
+function getPlaceMeta(p) {
+  const base = placeMeta[p.name] || {};
+  return {
+    time: base.time || defaultTimeByTab[currentTab] || '30–60 min',
+    transport: base.transport || zoneDefaultTransport[currentZone] || {icons:['walk'], station:'Area walk'},
+    cuisine: base.cuisine || (currentTab === 'restaurants' ? 'Local dining' : null),
+    redFlag: base.redFlag || null
+  };
+}
+
+function renderTransportBadges(meta) {
+  const tr = meta.transport || {};
+  const icons = tr.icons || [];
+  if (!icons.length && !tr.station) return '';
+  const iconHTML = icons.map(code => {
+    const cls = modeTransportCodes.has(code) ? `mode-${code}` : `line-${String(code).toLowerCase()}`;
+    const label = transportIconLabels[code] || code;
+    const title = transportIconTitles[code] || `Seoul Subway Line ${code}`;
+    return `<span class="line-icon ${cls}" title="${title}">${label}</span>`;
+  }).join('');
+  const station = tr.station ? `<span class="transport-station">${tr.station}</span>` : '';
+  return `<span class="transport-badges" title="Best transport: ${tr.station || 'see icons'}">${iconHTML}${station}</span>`;
+}
+
+
+const zoneMapConfig = {
+  hongdae: {
+    label: { lat: 37.5595, lng: 126.9285, en: 'Hongdae', kr: '홍대 · 망원' },
+    color: '#993556',
+    polygon: [
+      [37.5690,126.9115],[37.5740,126.9200],[37.5755,126.9305],[37.5725,126.9415],[37.5665,126.9490],[37.5585,126.9520],[37.5495,126.9495],[37.5445,126.9410],[37.5440,126.9295],[37.5480,126.9190],[37.5550,126.9120]
+    ]
+  },
+  gwanghwamun: {
+    label: { lat: 37.5750, lng: 126.9920, en: 'Gwanghwamun & Jongno', kr: '광화문 · 종로' },
+    color: '#D85A30',
+    polygon: [
+      [37.5875,126.9645],[37.5890,126.9780],[37.5885,126.9935],[37.5875,127.0080],[37.5840,127.0200],[37.5765,127.0275],[37.5670,127.0305],[37.5595,127.0245],[37.5560,127.0125],[37.5550,126.9975],[37.5575,126.9835],[37.5630,126.9710],[37.5725,126.9650]
+    ]
+  },
+  dongdaemun: {
+    label: { lat: 37.5710, lng: 127.0325, en: 'Dongdaemun', kr: '동대문 · DDP' },
+    color: '#3B6D11',
+    polygon: [
+      [37.5835,127.0105],[37.5850,127.0245],[37.5835,127.0375],[37.5800,127.0490],[37.5725,127.0545],[37.5640,127.0560],[37.5565,127.0510],[37.5530,127.0405],[37.5535,127.0260],[37.5575,127.0150],[37.5660,127.0105],[37.5755,127.0085]
+    ]
+  },
+  myeongdong: {
+    label: { lat: 37.5570, lng: 126.9895, en: 'Myeongdong & City Hall', kr: '명동 · 시청 · 남산' },
+    color: '#185FA5',
+    polygon: [
+      [37.5705,126.9725],[37.5730,126.9840],[37.5720,126.9955],[37.5695,127.0065],[37.5630,127.0135],[37.5540,127.0150],[37.5465,127.0105],[37.5435,127.0005],[37.5440,126.9885],[37.5475,126.9780],[37.5550,126.9720],[37.5635,126.9700]
+    ]
+  },
+  yongsan: {
+    label: { lat: 37.5365, lng: 126.9950, en: 'Yongsan', kr: '용산 · 이태원 · 한남' },
+    color: '#534AB7',
+    polygon: [
+      [37.5545,126.9670],[37.5575,126.9820],[37.5560,126.9985],[37.5525,127.0130],[37.5450,127.0200],[37.5350,127.0245],[37.5255,127.0215],[37.5190,127.0120],[37.5175,126.9985],[37.5200,126.9840],[37.5265,126.9725],[37.5380,126.9660]
+    ]
+  },
+  seongsu: {
+    label: { lat: 37.5440, lng: 127.0485, en: 'Seongsu', kr: '성수동 · 서울숲' },
+    color: '#BA7517',
+    polygon: [
+      [37.5575,127.0260],[37.5625,127.0385],[37.5630,127.0520],[37.5600,127.0655],[37.5525,127.0750],[37.5435,127.0790],[37.5345,127.0760],[37.5290,127.0665],[37.5280,127.0520],[37.5315,127.0385],[37.5395,127.0285],[37.5490,127.0250]
+    ]
+  },
+  gangnam: {
+    label: { lat: 37.5035, lng: 127.0375, en: 'Gangnam', kr: '강남 · 코엑스' },
+    color: '#5F5E5A',
+    polygon: [
+      [37.5235,127.0085],[37.5295,127.0245],[37.5300,127.0410],[37.5270,127.0565],[37.5205,127.0685],[37.5105,127.0735],[37.4995,127.0720],[37.4905,127.0640],[37.4860,127.0500],[37.4855,127.0335],[37.4895,127.0190],[37.4985,127.0100],[37.5100,127.0070]
+    ]
+  },
+  jamsil: {
+    label: { lat: 37.5115, lng: 127.0935, en: 'Jamsil', kr: '잠실 · 롯데월드' },
+    color: '#0F6E56',
+    polygon: [
+      [37.5285,127.0710],[37.5315,127.0845],[37.5315,127.0995],[37.5280,127.1135],[37.5210,127.1250],[37.5115,127.1310],[37.5010,127.1320],[37.4920,127.1255],[37.4885,127.1130],[37.4890,127.0985],[37.4930,127.0850],[37.5005,127.0750],[37.5110,127.0700]
+    ]
+  }
+};
+
+const mapLandmarks = [
+  { lat: 37.5796, lng: 126.9770, text: 'Gyeongbokgung' },
+  { lat: 37.5658, lng: 126.9752, text: 'City Hall · Deoksugung' },
+  { lat: 37.5512, lng: 126.9882, text: 'Myeongdong' },
+  { lat: 37.5326, lng: 126.9905, text: 'N Seoul Tower' },
+  { lat: 37.5447, lng: 127.0374, text: 'Seoul Forest' },
+  { lat: 37.5130, lng: 127.0586, text: 'COEX' },
+  { lat: 37.5110, lng: 127.0980, text: 'Lotte World Tower' }
+];
+
+const placeApproxCoords = {
+  "Gyeongbokgung Palace": [37.5796, 126.9770],
+  "Changgyeonggung Palace": [37.5788, 126.9949],
+  "Bukchon Hanok Village": [37.5826, 126.9836],
+  "Baekin-je House": [37.5807, 126.9849],
+  "Seosunna-gil": [37.5737, 126.9914],
+  "Samcheongdong Street": [37.5840, 126.9819],
+  "National Museum of Modern & Contemporary Art (MMCA)": [37.5788, 126.9801],
+  "Jogyesa Temple": [37.5739, 126.9822],
+  "Insadong": [37.5740, 126.9860],
+  "Yoollin Songkhyun Green Plaza": [37.5762, 126.9814],
+  "Tosokchon Samgyetang": [37.5777, 126.9716],
+  "Gwangjang Market": [37.5700, 126.9996],
+  "Siminsikhang": [37.5705, 126.9920],
+  "Jaha Handmade Mandu": [37.5923, 126.9672],
+  "Jongno 3-ga street stall alley": [37.5708, 126.9919],
+  "Café Onion Anguk": [37.5761, 126.9839],
+  "Gallery The Square — tea omakase": [37.5797, 126.9862],
+  "Jaiso Anguk": [37.5777, 126.9857],
+  "Dawon Traditional Tea House": [37.5747, 126.9855],
+
+  "Dongdaemun Design Plaza (DDP)": [37.5665, 127.0090],
+  "Dongdaemun History & Culture Park": [37.5657, 127.0089],
+  "Heunginjimun Gate (East Gate)": [37.5712, 127.0095],
+  "Dongdaemun shopping district": [37.5689, 127.0084],
+  "King Handmade Mandu": [37.5721, 127.0102],
+  "Sungcheon Makguksu": [37.5719, 127.0560],
+  "JW Marriott Dongdaemun — café & desserts": [37.5701, 127.0090],
+
+  "Deoksugung Palace": [37.5658, 126.9752],
+  "Seoul Museum of Art (SeMA)": [37.5641, 126.9739],
+  "Piknic": [37.5577, 126.9826],
+  "Cheonggyecheon Stream": [37.5690, 126.9785],
+  "Myeongdong to Cathedral walk": [37.5632, 126.9870],
+  "Namdaemun Market": [37.5592, 126.9776],
+  "Namsan & N Seoul Tower": [37.5512, 126.9882],
+  "Euljiro": [37.5662, 126.9910],
+  "Myeongdong Kyoja": [37.5626, 126.9850],
+  "Myeongdong street food alley": [37.5622, 126.9858],
+  "Café Bora": [37.5747, 126.9851],
+
+  "National Museum of Korea": [37.5239, 126.9804],
+  "Leeum Museum of Art": [37.5385, 126.9992],
+  "Itaewon Antique Furniture Street": [37.5337, 126.9946],
+  "Itaewon": [37.5345, 126.9946],
+  "Hannam-dong": [37.5379, 127.0047],
+  "Yongnidan-gil": [37.5301, 126.9689],
+  "Namyeongdon (남영돈) — pork collar BBQ": [37.5435, 126.9720],
+  "Gamasot Jokbal & Sundae-guk": [37.5427, 126.9725],
+  "Oilje": [37.5416, 126.9706],
+  "Gongi": [37.5392, 126.9968],
+  "Itaewon international food street": [37.5347, 126.9941],
+  "Anthracite Hannam": [37.5367, 127.0007],
+  "Auf Glatt Hannam": [37.5379, 127.0041],
+  "Itsuke Wonhyo-ro": [37.5355, 126.9656],
+  "Ohayo Donut": [37.5360, 126.9662],
+  "Morpe Coffee": [37.5364, 126.9667],
+
+  "Hongdae Street & art scene": [37.5563, 126.9236],
+  "Fun fact: the 'Hongdae boy'": [37.5570, 126.9240],
+  "Mangwon-dong": [37.5569, 126.9048],
+  "Mangwon Hangang Park": [37.5558, 126.8947],
+  "Okdong-sik": [37.5550, 126.9236],
+  "Nishimura Men Yeonnam": [37.5633, 126.9250],
+  "Itsmo Ramen": [37.5537, 126.9224],
+  "Gosun Handmade Dumplings Mangwon": [37.5553, 126.9061],
+  "Mangwon Market": [37.5564, 126.9051],
+  "Old Ferry Donut — Yeonnam branch": [37.5626, 126.9258],
+  "Rowingcoffee": [37.5560, 126.9080],
+  "Turtle Hip — Yeonnam": [37.5624, 126.9251],
+  "Beans Brothers Coffee Seoul": [37.5481, 126.9134],
+
+  "Ttukseom Hangang Park": [37.5307, 127.0660],
+  "Seoul Forest": [37.5447, 127.0374],
+  "Seongsu-dong café street": [37.5445, 127.0557],
+  "Seongsu Federation Space": [37.5440, 127.0508],
+  "Charcoal Dakgalbi Gyejarim": [37.5427, 127.0542],
+  "Neungdong Minari Seongsu": [37.5446, 127.0548],
+  "Jojo Kalguksu Seongsu": [37.5432, 127.0568],
+  "Patisserie Fruits": [37.5442, 127.0540],
+  "On The (온더)": [37.5452, 127.0575],
+  "Seongsu café street — general": [37.5445, 127.0557],
+
+  "Sinnonhyeon–Gangnam shopping boulevard": [37.5027, 127.0254],
+  "COEX Mall": [37.5130, 127.0586],
+  "Starfield Library (inside COEX)": [37.5126, 127.0591],
+  "Gangseomyeonok Apgujeong": [37.5277, 127.0284],
+  "Muatan": [37.5112, 127.0267],
+  "Apgujeong Rodeo Street": [37.5270, 127.0407],
+  "Sesicella Dosan Park": [37.5233, 127.0369],
+  "Old Ferry Donut — Garosu-gil": [37.5201, 127.0225],
+  "Café inside Starfield Library": [37.5126, 127.0591],
+
+  "Lotte World": [37.5111, 127.0980],
+  "Lotte World Tower": [37.5125, 127.1025],
+  "Seokchon Lake Park": [37.5083, 127.1015],
+  "Songridan-gil": [37.5116, 127.1080],
+  "Olympic Park": [37.5207, 127.1215],
+  "Downtowner Jamsil": [37.5139, 127.1004],
+  "Downtooner Jamsil": [37.5139, 127.1004],
+  "Manjok Ohyang Jokbal — Jamsil branch": [37.5114, 127.0860],
+  "Mongchon Dakgalbi": [37.5126, 127.1108],
+  "Arari Hanjeongsik": [37.5199, 127.1230],
+  "Quiet Cream Tea": [37.5047, 127.0932],
+  "Creamu Loving Club": [37.5114, 127.1090],
+  "Han River view cafés": [37.5177, 127.0738],
+  "Café Mamas Gwanghwamun": [37.5750, 126.9781],
+  "Gwanghwamun palace day area": [37.5768, 126.9794],
+  "Myeongdong + Namdaemun Market": [37.5605, 126.9802],
+  "Bukchon + Insadong walking area": [37.5778, 126.9850],
+  "Seongsu cafe street route area": [37.5446, 127.0554],
+  "Yongsan museum and Hannam route area": [37.5358, 126.9953],
+  "Hongdae + Mangwon route area": [37.5570, 126.9145],
+  "Jamsil Lotte route area": [37.5118, 127.1012]
+};
+
+const hotelAreas = [
+  {
+    id: 'jongno',
+    name: 'Jongno (종로)',
+    why: 'Best base for palace visits, Bukchon, Insadong, and old Seoul. Quieter in the evenings than Myeongdong. Good subway access via Lines 1, 3, and 5.',
+    hotels: [
+      {
+        stars: 3, tier: 'Budget-friendly',
+        name: "Ibis Styles Ambassador Seoul Myeongdong", kr: "이비스 스타일 앰배서더 서울 명동",
+        maps: "Ibis Styles Ambassador Seoul Myeongdong", coords: [37.5638, 126.9867],
+        transport: { icons: ['4'], station: 'Myeongdong' },
+        desc: "Clean, reliable, and well-located Ibis property on the edge of Myeongdong and Jongno. Good value for a central base without spending on luxury.",
+        tags: ['Good value', 'Central']
+      },
+      {
+        stars: 3, tier: 'Budget-friendly',
+        name: "Beewon Guesthouse", kr: "비원 게스트하우스",
+        maps: "Beewon Guesthouse Seoul Jongno", coords: [37.5791, 126.9867],
+        transport: { icons: ['3'], station: 'Anguk' },
+        desc: "A well-regarded guesthouse a short walk from Anguk station, Bukchon, and Gyeongbokgung. Clean, affordable, and very well placed for palace sightseeing.",
+        tags: ['Near Bukchon', 'Budget', 'Palace access']
+      },
+      {
+        stars: 4, tier: 'Comfort',
+        name: "Andaz Seoul Gangnam", kr: "안다즈 서울 강남",
+        maps: "Hotel The Designers Jongno Seoul", coords: [37.5704, 126.9893],
+        transport: { icons: ['1','3','5'], station: 'Jongno 3-ga' },
+        desc: "A well-reviewed boutique-style hotel in central Jongno, walking distance from Insadong, Cheonggyecheon, and Gwanghwamun. Good balance of comfort and location.",
+        tags: ['Boutique', 'Central Jongno', 'Walkable']
+      },
+      {
+        stars: 4, tier: 'Comfort',
+        name: "Glad Mapo", kr: "글래드 마포",
+        maps: "Courtyard by Marriott Seoul Namdaemun", coords: [37.5602, 126.9754],
+        transport: { icons: ['1','2','4'], station: 'City Hall / Hoehyeon' },
+        desc: "A strong 4-star option in the Namdaemun/City Hall area — well connected, near Myeongdong and Deoksugung, and a reliable mid-range choice for first-time Seoul visitors.",
+        tags: ['Reliable', 'Central base', 'Walkable']
+      },
+      {
+        stars: 5, tier: 'Luxury',
+        name: "Four Seasons Hotel Seoul", kr: "포시즌스 호텔 서울",
+        maps: "Four Seasons Hotel Seoul", coords: [37.5719, 126.9762],
+        transport: { icons: ['5'], station: 'Gwanghwamun' },
+        desc: "Seoul's top luxury address in the Gwanghwamun area — steps from Gyeongbokgung, central government buildings, and some of the best restaurants in the city. Exceptional service and rooms.",
+        tags: ['Top-tier luxury', 'Near Gyeongbokgung', 'Best-in-class']
+      },
+      {
+        stars: 5, tier: 'Luxury',
+        name: "Josun Palace, a Luxury Collection Hotel", kr: "조선 팰리스 럭셔리 컬렉션",
+        maps: "Josun Palace Seoul Gangnam Luxury Collection", coords: [37.5714, 126.9768],
+        transport: { icons: ['5'], station: 'Gwanghwamun' },
+        desc: "A refined 5-star option in Gwanghwamun with heritage design references and superb food and beverage offerings. More discreet than the Four Seasons but equally well positioned.",
+        tags: ['Heritage design', 'Gwanghwamun', 'Excellent dining']
+      }
+    ]
+  },
+  {
+    id: 'myeongdong',
+    name: 'Myeongdong (명동)',
+    why: 'Maximum convenience for shopping and sightseeing. Walking distance to Namdaemun, Deoksugung, Cheonggyecheon, and Namsan. Can be noisy at night due to the shopping district.',
+    hotels: [
+      {
+        stars: 3, tier: 'Budget-friendly',
+        name: "Travelodge Myeongdong", kr: "트래블로지 명동",
+        maps: "Travelodge Myeongdong Seoul", coords: [37.5622, 126.9837],
+        transport: { icons: ['4'], station: 'Myeongdong' },
+        desc: "Compact, affordable, and right in the heart of Myeongdong. A no-frills option that does exactly what it needs to — clean rooms, central location, good subway access.",
+        tags: ['Budget', 'Right in Myeongdong', 'No-frills']
+      },
+      {
+        stars: 3, tier: 'Budget-friendly',
+        name: "Ibis Ambassador Seoul Myeongdong", kr: "이비스 앰배서더 서울 명동",
+        maps: "Ibis Ambassador Seoul Myeongdong", coords: [37.5617, 126.9822],
+        transport: { icons: ['4'], station: 'Myeongdong' },
+        desc: "Solid Ibis property with a prime Myeongdong location. Reliable quality, friendly staff, and easy access to subway and street food.",
+        tags: ['Reliable chain', 'Budget-friendly', 'Prime location']
+      },
+      {
+        stars: 4, tier: 'Comfort',
+        name: "L7 Myeongdong by Lotte", kr: "L7 명동 바이 롯데",
+        maps: "L7 Myeongdong", coords: [37.5616, 126.9862],
+        transport: { icons: ['4'], station: 'Myeongdong' },
+        desc: "A stylish lifestyle hotel right on the main Myeongdong strip. Rooftop bar with city views, modern rooms, and direct access to shopping, street food, and Namsan cable car.",
+        tags: ['Rooftop bar', 'Stylish', 'Street food on doorstep']
+      },
+      {
+        stars: 4, tier: 'Comfort',
+        name: "Hotel Gracery Seoul", kr: "호텔 그레이스리 서울",
+        maps: "Hotel Gracery Seoul", coords: [37.5628, 126.9785],
+        transport: { icons: ['1','2'], station: 'City Hall' },
+        desc: "A well-regarded 4-star on the quieter City Hall side of Myeongdong — close to Deoksugung and Namdaemun, but without the noise of the Myeongdong pedestrian street itself.",
+        tags: ['Quieter side', 'Near Deoksugung', 'City Hall access']
+      },
+      {
+        stars: 5, tier: 'Luxury',
+        name: "Lotte Hotel Seoul", kr: "롯데호텔 서울",
+        maps: "Lotte Hotel Seoul", coords: [37.5653, 126.9809],
+        transport: { icons: ['2'], station: 'Euljiro 1-ga' },
+        desc: "The classic Seoul landmark hotel — part of the Lotte department store complex near Myeongdong. Multiple restaurants, vast rooms, and unbeatable central access. A reliable 5-star choice for families.",
+        tags: ['Classic flagship', 'Very central', 'Shopping connected']
+      },
+      {
+        stars: 5, tier: 'Luxury',
+        name: "Westin Josun Seoul", kr: "웨스틴 조선 서울",
+        maps: "Westin Josun Seoul", coords: [37.5651, 126.9781],
+        transport: { icons: ['1','2'], station: 'City Hall' },
+        desc: "A storied Seoul hotel with nearly a century of history, recently refurbished to 5-star standards. Excellent location between City Hall, Myeongdong, and Euljiro. Formal, polished, and very comfortable.",
+        tags: ['Historic hotel', 'Refurbished', 'City Hall adjacent']
+      }
+    ]
+  },
+  {
+    id: 'gwanghwamun',
+    name: 'Gwanghwamun (광화문)',
+    why: 'Ideal if the group is palace-first. Walking distance to Gyeongbokgung, Changdeokgung, and Bukchon. Good for an early start before tour crowds arrive. Slightly quieter nights.',
+    hotels: [
+      {
+        stars: 3, tier: 'Budget-friendly',
+        name: "Gwanghwamun Ramada Encore", kr: "광화문 라마다 앙코르",
+        maps: "Ramada Encore by Wyndham Seoul Dongdaemun", coords: [37.5738, 126.9798],
+        transport: { icons: ['5'], station: 'Gwanghwamun' },
+        desc: "Affordable and practical for the Gwanghwamun area. Basic amenities but good positioning for palace-focused days. Quiet evenings make it a peaceful base.",
+        tags: ['Budget', 'Near palace', 'Quiet evenings']
+      },
+      {
+        stars: 4, tier: 'Comfort',
+        name: "Hotel The Designers Gwanghwamun", kr: "호텔 더 디자이너스 광화문",
+        maps: "Hotel The Designers Gwanghwamun Seoul", coords: [37.5698, 126.9756],
+        transport: { icons: ['5'], station: 'Gwanghwamun' },
+        desc: "A design-focused boutique hotel close to Gyeongbokgung, Cheong Wa Dae, and Sejong Cultural Centre. Well-reviewed rooms and a more characterful stay than chain options.",
+        tags: ['Boutique design', 'Near palace', 'Characterful']
+      },
+      {
+        stars: 4, tier: 'Comfort',
+        name: "Glad Mapo", kr: "글래드 여의도",
+        maps: "Koreana Hotel Seoul Gwanghwamun", coords: [37.5714, 126.9756],
+        transport: { icons: ['5'], station: 'Gwanghwamun' },
+        desc: "A reliable 4-star hotel in the Gwanghwamun core with easy taxi access and central positioning. Good for families wanting comfort without paying 5-star prices.",
+        tags: ['Reliable', 'Central Gwanghwamun', 'Family-friendly']
+      },
+      {
+        stars: 5, tier: 'Luxury',
+        name: "Four Seasons Hotel Seoul", kr: "포시즌스 호텔 서울",
+        maps: "Four Seasons Hotel Seoul", coords: [37.5719, 126.9762],
+        transport: { icons: ['5'], station: 'Gwanghwamun' },
+        desc: "The finest hotel in the Gwanghwamun district and among Seoul's very best overall. Exceptional service, outstanding restaurants, and a location that makes palace visits and city exploration effortless.",
+        tags: ['Best in area', 'Outstanding service', 'Palace-adjacent']
+      }
+    ]
+  },
+  {
+    id: 'yongsan',
+    name: 'Yongsan (용산)',
+    why: 'Central between old and new Seoul — good subway access via Line 1 and 4, close to National Museum, Itaewon, and Hannam. Quieter than Myeongdong but very well connected.',
+    hotels: [
+      {
+        stars: 3, tier: 'Budget-friendly',
+        name: "Nine Tree Premier Hotel Myeongdong II", kr: "나인트리 프리미어 호텔 명동 2",
+        maps: "Nine Tree Premier Hotel Seoul Station", coords: [37.5462, 126.9641],
+        transport: { icons: ['1','4'], station: 'Seoul Station' },
+        desc: "Good-value option near Seoul Station on the edge of the Yongsan corridor — convenient for the airport railroad and central access at an affordable price point.",
+        tags: ['Budget-friendly', 'Airport rail nearby', 'Seoul Station']
+      },
+      {
+        stars: 3, tier: 'Budget-friendly',
+        name: "Travelodge Seoul Myeongdong 2", kr: "트래블로지 서울 남대문",
+        maps: "Travelodge Seoul Namdaemun", coords: [37.5512, 126.9753],
+        transport: { icons: ['1','4'], station: 'Seoul Station / Hoehyeon' },
+        desc: "A well-priced option in the Namdaemun/Seoul Station zone — accessible, no-nonsense, and a solid budget choice for those who want to stay near the Yongsan corridor.",
+        tags: ['Budget', 'Accessible', 'Near Seoul Station']
+      },
+      {
+        stars: 4, tier: 'Comfort',
+        name: "Courtyard by Marriott Seoul Namdaemun", kr: "코트야드 메리어트 서울 남대문",
+        maps: "Courtyard by Marriott Seoul Namdaemun", coords: [37.5602, 126.9754],
+        transport: { icons: ['1','2','4'], station: 'City Hall / Hoehyeon' },
+        desc: "One of the best mid-range choices in central Seoul — strong location between Namdaemun, Myeongdong, and City Hall, with reliable Marriott-standard rooms.",
+        tags: ['Top mid-range pick', 'Excellent location', 'Reliable']
+      },
+      {
+        stars: 4, tier: 'Comfort',
+        name: "Hilton Garden Inn Seoul Yongsan", kr: "힐튼 가든 인 서울 용산",
+        maps: "Hilton Garden Inn Seoul Yongsan", coords: [37.5328, 126.9649],
+        transport: { icons: ['1'], station: 'Namyeong' },
+        desc: "A comfortable Hilton property in the Yongsan district — well positioned for National Museum visits, Itaewon, and Hannam-dong. Quieter than Myeongdong and better for a relaxed pace.",
+        tags: ['Comfort tier', 'Near National Museum', 'Quiet base']
+      },
+      {
+        stars: 5, tier: 'Luxury',
+        name: "Grand Hyatt Seoul", kr: "그랜드 하얏트 서울",
+        maps: "Grand Hyatt Seoul", coords: [37.5393, 126.9987],
+        transport: { icons: ['6'], station: 'Itaewon' },
+        desc: "A Seoul institution on the slopes of Namsan, between Itaewon and Hannam. Spacious rooms, multiple dining venues, a well-regarded pool and spa, and excellent taxi and shuttle access to all districts.",
+        tags: ['Seoul institution', 'Namsan views', 'Excellent facilities']
+      },
+      {
+        stars: 5, tier: 'Luxury',
+        name: "Signiel Seoul", kr: "시그니엘 서울",
+        maps: "Signiel Seoul Lotte World Tower", coords: [37.5125, 127.1025],
+        transport: { icons: ['2'], station: 'Jamsil' },
+        desc: "A statement 5-star hotel occupying the upper floors of Lotte World Tower in Jamsil. Extraordinary views, outstanding service, and a genuinely memorable stay — best if the family spends significant time in Jamsil.",
+        tags: ['Sky-high views', 'Ultra-luxury', 'Lotte World Tower']
+      }
+    ]
+  },
+  {
+    id: 'dongdaemun',
+    name: 'Dongdaemun (동대문)',
+    why: 'A smart base if the group plans to visit both Gwanghwamun/Jongno and Seongsu/Jamsil on different days. DDP, the fashion markets, and Line 2/5 access make it versatile. Lively at night (markets run late).',
+    hotels: [
+      {
+        stars: 3, tier: 'Budget-friendly',
+        name: "Ramada Encore by Wyndham Seoul Dongdaemun", kr: "라마다 앙코르 바이 윈덤 서울 동대문",
+        maps: "Ramada Encore by Wyndham Seoul Dongdaemun", coords: [37.5714, 127.0082],
+        transport: { icons: ['1','4'], station: 'Dongdaemun' },
+        desc: "Affordable and well-located for DDP visits and Dongdaemun market access. Simple rooms at an honest price — a practical choice for budget-conscious travellers who want to be near the action.",
+        tags: ['Budget', 'Near DDP', 'Market access']
+      },
+      {
+        stars: 3, tier: 'Budget-friendly',
+        name: "PJ Hotel Seoul", kr: "PJ 호텔 서울",
+        maps: "PJ Hotel Seoul Dongdaemun", coords: [37.5676, 127.0094],
+        transport: { icons: ['2','4','5'], station: 'Dongdaemun History & Culture Park' },
+        desc: "A long-standing hotel in the Dongdaemun area with a loyal local following. Decent rooms, reasonable prices, and very convenient for DDP and the fashion shopping district.",
+        tags: ['Reliable local', 'Budget-friendly', 'DDP adjacent']
+      },
+      {
+        stars: 4, tier: 'Comfort',
+        name: "Naru Seoul MGallery", kr: "나루 서울 엠갤러리",
+        maps: "Naru Seoul Hotel MGallery Mapo", coords: [37.5683, 126.9178],
+        transport: { icons: ['2','4','5'], station: 'Dongdaemun History & Culture Park' },
+        desc: "A thoughtfully designed hotel in the Dongdaemun district with a local art-and-culture focus. Comfortable rooms, good dining, and a strong location for DDP and Euljiro exploration.",
+        tags: ['Design hotel', 'Near DDP', 'Art-focused']
+      },
+      {
+        stars: 4, tier: 'Comfort',
+        name: "Novotel Ambassador Seoul Dongdaemun", kr: "노보텔 앰배서더 서울 동대문",
+        maps: "Novotel Ambassador Seoul Dongdaemun Hotels and Residences", coords: [37.5669, 127.0101],
+        transport: { icons: ['2','4','5'], station: 'Dongdaemun History & Culture Park' },
+        desc: "A reliable 4-star with solid rooms and facilities directly connected to the DDP/Dongdaemun district. Well set up for families — spacious rooms, multiple restaurants, and good service.",
+        tags: ['Family-friendly', 'DDP connected', 'Reliable 4-star']
+      },
+      {
+        stars: 5, tier: 'Luxury',
+        name: "JW Marriott Dongdaemun Square Seoul", kr: "JW 메리어트 동대문스퀘어 서울",
+        maps: "JW Marriott Dongdaemun Square Seoul", coords: [37.5706, 127.0096],
+        transport: { icons: ['2','4','5'], station: 'Dongdaemun History & Culture Park' },
+        desc: "The standout 5-star in the Dongdaemun area — superb rooms, an excellent pool and spa, and outstanding pastry and café offerings in-house (a Jin recommendation). Right beside DDP and the Dongdaemun market complex.",
+        tags: ['Best in area', 'Outstanding café/desserts', 'Pool & spa', 'DDP adjacent']
+      }
+    ]
+  }
+];
+
+// Flat list for map coordinate registration
+const hotelRecommendations = hotelAreas.flatMap(area => area.hotels);
+
+Object.assign(placeApproxCoords, Object.fromEntries(hotelRecommendations.map((hotel) => [hotel.name, hotel.coords])));
+
+
+
+const subwayStations = [
+  { name: 'Seoul Station', coords: [37.5547, 126.9706], lines: ['1','4','airport','gj'] },
+  { name: 'City Hall', coords: [37.5657, 126.9769], lines: ['1','2'] },
+  { name: 'Gwanghwamun', coords: [37.5716, 126.9766], lines: ['5'] },
+  { name: 'Gyeongbokgung', coords: [37.5758, 126.9736], lines: ['3'] },
+  { name: 'Anguk', coords: [37.5765, 126.9855], lines: ['3'] },
+  { name: 'Jonggak', coords: [37.5702, 126.9831], lines: ['1'] },
+  { name: 'Jongno 3-ga', coords: [37.5716, 126.9918], lines: ['1','3','5'] },
+  { name: 'Jongno 5-ga', coords: [37.5709, 127.0019], lines: ['1'] },
+  { name: 'Euljiro 1-ga', coords: [37.5660, 126.9827], lines: ['2'] },
+  { name: 'Euljiro 3-ga', coords: [37.5663, 126.9910], lines: ['2','3'] },
+  { name: 'Myeongdong', coords: [37.5609, 126.9863], lines: ['4'] },
+  { name: 'Hoehyeon', coords: [37.5585, 126.9782], lines: ['4'] },
+  { name: 'Chungmuro', coords: [37.5612, 126.9940], lines: ['3','4'] },
+  { name: 'Dongdaemun', coords: [37.5710, 127.0099], lines: ['1','4'] },
+  { name: 'Dongdaemun History & Culture Park', coords: [37.5651, 127.0079], lines: ['2','4','5'] },
+  { name: 'Sinseol-dong', coords: [37.5753, 127.0245], lines: ['1','2','u'] },
+  { name: 'Yongsan', coords: [37.5298, 126.9647], lines: ['1','gj'] },
+  { name: 'Sinyongsan', coords: [37.5292, 126.9679], lines: ['4'] },
+  { name: 'Namyeong', coords: [37.5410, 126.9713], lines: ['1'] },
+  { name: 'Samgakji', coords: [37.5355, 126.9739], lines: ['4','6'] },
+  { name: 'Itaewon', coords: [37.5345, 126.9946], lines: ['6'] },
+  { name: 'Noksapyeong', coords: [37.5347, 126.9869], lines: ['6'] },
+  { name: 'Hangangjin', coords: [37.5396, 127.0017], lines: ['6'] },
+  { name: 'Hyochang Park', coords: [37.5393, 126.9614], lines: ['6','gj'] },
+  { name: 'Hongik Univ.', coords: [37.5572, 126.9245], lines: ['2','airport','gj'] },
+  { name: 'Hapjeong', coords: [37.5495, 126.9138], lines: ['2','6'] },
+  { name: 'Sangsu', coords: [37.5478, 126.9227], lines: ['6'] },
+  { name: 'Mangwon', coords: [37.5561, 126.9101], lines: ['6'] },
+  { name: 'Sinchon', coords: [37.5551, 126.9369], lines: ['2'] },
+  { name: 'Seongsu', coords: [37.5446, 127.0559], lines: ['2'] },
+  { name: 'Ttukseom', coords: [37.5472, 127.0474], lines: ['2'] },
+  { name: 'Seoul Forest', coords: [37.5436, 127.0447], lines: ['bundang'] },
+  { name: 'Konkuk Univ.', coords: [37.5404, 127.0692], lines: ['2','7'] },
+  { name: 'Ttukseom Resort', coords: [37.5315, 127.0667], lines: ['7'] },
+  { name: 'Sinsa', coords: [37.5164, 127.0203], lines: ['3','shinbundang'] },
+  { name: 'Apgujeong', coords: [37.5271, 127.0285], lines: ['3'] },
+  { name: 'Apgujeong Rodeo', coords: [37.5274, 127.0405], lines: ['bundang'] },
+  { name: 'Gangnam-gu Office', coords: [37.5172, 127.0413], lines: ['7','bundang'] },
+  { name: 'Sinnonhyeon', coords: [37.5048, 127.0255], lines: ['9','shinbundang'] },
+  { name: 'Gangnam', coords: [37.4979, 127.0276], lines: ['2','shinbundang'] },
+  { name: 'Yeoksam', coords: [37.5007, 127.0365], lines: ['2'] },
+  { name: 'Samseong', coords: [37.5088, 127.0632], lines: ['2'] },
+  { name: 'Bongeunsa', coords: [37.5143, 127.0602], lines: ['9'] },
+  { name: 'Jamsil', coords: [37.5133, 127.1000], lines: ['2','8'] },
+  { name: 'Jamsillaru', coords: [37.5207, 127.1038], lines: ['2'] },
+  { name: 'Songpanaru', coords: [37.5103, 127.1120], lines: ['9'] },
+  { name: 'Seokchon', coords: [37.5054, 127.1069], lines: ['8','9'] },
+  { name: 'Mongchontoseong', coords: [37.5175, 127.1128], lines: ['8'] },
+  { name: 'Olympic Park', coords: [37.5163, 127.1300], lines: ['5','9'] }
+];
+
+let activePlaceMarker = null;
+let activeStationMarker = null;
+let activeStationConnector = null;
+
+
+function haversineKm(a, b) {
+  const toRad = (deg) => deg * Math.PI / 180;
+  const R = 6371;
+  const dLat = toRad(b[0] - a[0]);
+  const dLng = toRad(b[1] - a[1]);
+  const lat1 = toRad(a[0]);
+  const lat2 = toRad(b[0]);
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+function getNearestSubwayStation(coords) {
+  return subwayStations
+    .map((station) => ({ ...station, distanceKm: haversineKm(coords, station.coords) }))
+    .sort((a, b) => a.distanceKm - b.distanceKm)[0];
+}
+
+function renderLineIcons(lineCodes = []) {
+  return lineCodes.map((code) => {
+    const label = transportIconLabels[code] || code;
+    const title = transportIconTitles[code] || `Seoul Subway Line ${code}`;
+    return `<span class="line-icon line-${String(code).toLowerCase()}" title="${escapeAttr(title)}">${escapeAttr(label)}</span>`;
+  }).join('');
+}
+
+function renderNearestStationHTML(station) {
+  if (!station) return '';
+  const distanceMeters = Math.round((station.distanceKm || 0) * 1000);
+  const distanceText = distanceMeters >= 1000 ? `${station.distanceKm.toFixed(1)} km` : `${distanceMeters} m`;
+  return `<div class="place-popup-station">
+    <div class="place-popup-station-title"><i class="ti ti-train" aria-hidden="true"></i> Nearest subway station</div>
+    <div class="place-popup-station-line">${renderLineIcons(station.lines)}<strong>${escapeAttr(station.name)}</strong><span class="station-distance">approx. ${distanceText}</span></div>
+  </div>`;
+}
+
+function renderStationMarkerHTML(station) {
+  return `<div class="nearest-station-label">${renderLineIcons(station.lines)}<span class="station-name">${escapeAttr(station.name)}</span></div>`;
+}
+
+function escapeAttr(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
+function hashPlaceOffset(seed) {
+  let hash = 0;
+  const value = String(seed || '');
+  for (let i = 0; i < value.length; i++) hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+  const latOffset = (((hash & 255) / 255) - 0.5) * 0.012;
+  const lngOffset = ((((hash >> 8) & 255) / 255) - 0.5) * 0.018;
+  return [latOffset, lngOffset];
+}
+
+function getApproxPlaceLatLng(placeName, zoneId) {
+  if (placeApproxCoords[placeName]) {
+    return { coords: placeApproxCoords[placeName], precision: 'approximate place location' };
+  }
+  const label = zoneMapConfig[zoneId]?.label || zoneMapConfig[currentZone]?.label;
+  if (!label) return { coords: [37.554, 127.015], precision: 'central Seoul fallback' };
+  const [latOffset, lngOffset] = hashPlaceOffset(placeName);
+  return { coords: [label.lat + latOffset, label.lng + lngOffset], precision: 'approximate area location' };
+}
+
+function showPlaceOnMap(placeName, mapsQuery, krName, zoneId) {
+  initLeafletMap();
+  if (!zoneMap || typeof L === 'undefined') return;
+
+  const { coords, precision } = getApproxPlaceLatLng(placeName, zoneId);
+  const nearestStation = getNearestSubwayStation(coords);
+
+  if (activePlaceMarker) zoneMap.removeLayer(activePlaceMarker);
+  if (activeStationMarker) zoneMap.removeLayer(activeStationMarker);
+  if (activeStationConnector) zoneMap.removeLayer(activeStationConnector);
+
+  const pinIcon = L.divIcon({
+    className: '',
+    html: '<div class="place-map-pin" aria-hidden="true"></div>',
+    iconSize: [22, 22],
+    iconAnchor: [11, 21],
+    popupAnchor: [0, -22]
+  });
+
+  activePlaceMarker = L.marker(coords, { icon: pinIcon, keyboard: false }).addTo(zoneMap);
+
+  if (nearestStation) {
+    activeStationConnector = L.polyline([coords, nearestStation.coords], {
+      color: '#475569',
+      weight: 2,
+      opacity: 0.55,
+      dashArray: '5 6'
+    }).addTo(zoneMap);
+
+    const stationIcon = L.divIcon({
+      className: '',
+      html: renderStationMarkerHTML(nearestStation),
+      iconSize: null,
+      iconAnchor: [0, 18]
+    });
+    activeStationMarker = L.marker(nearestStation.coords, { icon: stationIcon, keyboard: false }).addTo(zoneMap);
+  }
+
+  const popupHTML = `
+    <div class="place-popup-title">${escapeAttr(placeName)}</div>
+    ${krName ? `<div class="place-popup-kr">${escapeAttr(krName)}</div>` : ''}
+    <div class="place-popup-note">${precision}. Use the Google Maps button on the card for exact navigation.</div>
+    ${renderNearestStationHTML(nearestStation)}
+  `;
+  activePlaceMarker.bindPopup(popupHTML).openPopup();
+
+  if (nearestStation) {
+    zoneMap.fitBounds([coords, nearestStation.coords], { padding: [80, 80], maxZoom: 15, animate: true });
+  } else {
+    zoneMap.setView(coords, Math.max(zoneMap.getZoom(), 14), { animate: true });
+  }
+
+  const mapEl = document.getElementById('leaflet-map');
+  if (mapEl) mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+
+let zoneMap = null;
+let zoneLayerRegistry = {};
+let zoneLabelRegistry = {};
+
+const appPageMapSlots = {
+  map: 'map-page-map-slot',
+  hotels: 'hotel-map-slot',
+  picks: 'picks-map-slot',
+  family: 'family-map-slot'
+};
+
+function moveSharedMapTo(pageId) {
+  const mapArea = document.getElementById('shared-map-area');
+  const slotId = appPageMapSlots[pageId] || appPageMapSlots.map;
+  const slot = document.getElementById(slotId);
+  if (mapArea && slot && mapArea.parentElement !== slot) {
+    slot.appendChild(mapArea);
+  }
+}
+
+function showAppPage(pageId) {
+  const validPage = ['home','map','hotels','picks','family'].includes(pageId) ? pageId : 'home';
+  document.querySelectorAll('.page-view').forEach((page) => page.classList.remove('active'));
+  const pageEl = document.getElementById('page-' + validPage);
+  if (pageEl) pageEl.classList.add('active');
+
+  document.querySelectorAll('.nav-btn').forEach((btn) => btn.classList.remove('active'));
+  const navEl = document.getElementById('nav-' + validPage);
+  if (navEl) navEl.classList.add('active');
+
+  if (validPage === 'hotels') renderHotels();
+  if (validPage === 'picks') renderTourCourses();
+  if (validPage === 'family') renderFamilyTour();
+
+  if (validPage === 'map' || validPage === 'hotels' || validPage === 'picks' || validPage === 'family') {
+    moveSharedMapTo(validPage);
+    initLeafletMap();
+    window.setTimeout(() => {
+      if (zoneMap) {
+        zoneMap.invalidateSize();
+        updateMapSelection();
+      }
+    }, 0);
+  } else {
+    moveSharedMapTo('map');
+  }
+}
+
+function renderHotels() {
+  const list = document.getElementById('hotel-list');
+  if (!list) return;
+
+  const tierOrder = ['Budget-friendly', 'Comfort', 'Luxury'];
+  const tierIcon = { 'Budget-friendly': 'ti-coin', 'Comfort': 'ti-building', 'Luxury': 'ti-crown' };
+  const tierStars = { 'Budget-friendly': '3-star', 'Comfort': '4-star', 'Luxury': '5-star' };
+  const tierColor = { 'Budget-friendly': 'var(--color-text-success)', 'Comfort': 'var(--color-text-info)', 'Luxury': '#B8860B' };
+
+  list.innerHTML = hotelAreas.map((area) => {
+    const byTier = {};
+    tierOrder.forEach(t => { byTier[t] = area.hotels.filter(h => h.tier === t); });
+
+    const tiersHTML = tierOrder.map(tier => {
+      const hotels = byTier[tier];
+      if (!hotels.length) return '';
+      const hotelsHTML = hotels.map((hotel) => {
+        const tags = (hotel.tags || []).map(tag => `<span class="place-tag tag-neutral">${tag}</span>`).join('');
+        const transport = renderTransportBadges({ transport: hotel.transport });
+        const mapsLink = `<a class="maps-btn" href="${mapsUrl(hotel.maps || hotel.name)}" target="_blank" rel="noopener"><i class="ti ti-map-pin" aria-hidden="true"></i> Google Maps</a>`;
+        return `<div class="hotel-card">
+          <div class="hotel-top">
+            <button class="hotel-name place-map-trigger" type="button" data-place-name="${escapeAttr(hotel.name)}" data-place-query="${escapeAttr(hotel.maps || hotel.name)}" data-place-kr="${escapeAttr(hotel.kr || '')}" data-zone-id="" title="Show approximate hotel location on the map">${hotel.name}<span class="place-map-cue">map</span></button>
+          </div>
+          <div class="place-name-kr">${hotel.kr}</div>
+          <div class="hotel-meta">${transport}${tags}</div>
+          <div class="hotel-desc">${hotel.desc}</div>
+          <div class="place-footer"><div></div>${mapsLink}</div>
+        </div>`;
+      }).join('');
+      return `<div class="hotel-tier-group">
+        <div class="hotel-tier-header">
+          <i class="ti ${tierIcon[tier]}" style="color:${tierColor[tier]};" aria-hidden="true"></i>
+          <span class="hotel-tier-label" style="color:${tierColor[tier]};">${tier}</span>
+          <span class="hotel-tier-stars">${tierStars[tier]}</span>
+        </div>
+        <div class="hotel-tier-list">${hotelsHTML}</div>
+      </div>`;
+    }).join('');
+
+    return `<div class="hotel-area-group">
+      <div class="hotel-area-header">
+        <div class="hotel-area-name">${area.name}</div>
+        <div class="hotel-area-why">${area.why}</div>
+      </div>
+      ${tiersHTML}
+    </div>`;
+  }).join('');
+
+  attachMapTriggers(list);
+}
+
+const suggestedRouteCourses = [
+  {
+    id: 'old-seoul', zoneId: 'gwanghwamun', number: '01',
+    color: '#D85A30',
+    title: 'Old Seoul — Palaces, Bukchon, Insadong & Myeongdong',
+    subtitle: 'Classic Seoul sightseeing, photos, shopping, and a low-risk food day.',
+    tags: ['Full day', 'Most classic route', 'Shopping + culture', 'Good first Seoul day'],
+    warning: 'Do not try to visit two large palaces in one day. Choose either Gyeongbokgung or Changgyeonggung. Palace grounds are large and tiring in warm weather.',
+    sections: [
+      { title: 'Morning', icon: 'ti-sun', color: '#F59E0B', steps: [
+        { time: '8:00 AM', duration: '45 min', title: 'Cheonggyecheon Stream', placeName: 'Cheonggyecheon Stream', kr: '청계천', maps: 'Cheonggyecheon Stream Seoul', zoneId: 'myeongdong', note: 'A gentle warm-up walk before the day gets busy. Go early — it is cooler and quieter in the morning.', who: ['Wayne'] },
+        { time: '9:30 AM', duration: '2–3 hrs', title: 'Gyeongbokgung or Changgyeonggung Palace', placeName: 'Gyeongbokgung Palace', kr: '경복궁 또는 창경궁', maps: 'Gyeongbokgung Palace Seoul', zoneId: 'gwanghwamun', note: 'Choose one palace only. Gyeongbokgung is the iconic choice; Changgyeonggung is quieter. Hanbok rental at the gate can make entry free — check the current rule.', who: ['Karen'] },
+        { time: '12:30 PM', duration: '1 hr', title: 'Lunch — Café Mamas Gwanghwamun', placeName: 'Café Mamas Gwanghwamun', kr: '카페 마마스 광화문', maps: 'Cafe Mamas Gwanghwamun Twin Tree Tower', zoneId: 'gwanghwamun', note: 'Low-risk lunch for those who want sandwiches, salads, or coffee rather than heavy Korean food. Keagan and Jin both like it.', who: [] },
+      ]},
+      { title: 'Afternoon', icon: 'ti-camera', color: '#8B5CF6', steps: [
+        { time: '2:00 PM', duration: '1–1.5 hrs', title: 'Bukchon Hanok Village', placeName: 'Bukchon Hanok Village', kr: '북촌한옥마을', maps: 'Bukchon Hanok Village Seoul', zoneId: 'gwanghwamun', note: 'Very photo-worthy traditional Korean houses. A real residential neighbourhood — keep voices low.', who: ['Karen', 'Candice'] },
+        { time: '3:30 PM', duration: '1 hr', title: 'Insadong', placeName: 'Insadong', kr: '인사동', maps: 'Insadong Seoul', zoneId: 'gwanghwamun', note: 'Traditional crafts, antiques, art, and souvenirs. Karen will likely love browsing here.', who: ['Karen'] },
+        { time: '4:30 PM', duration: '1.5 hrs', title: 'Myeongdong + Namdaemun Market', placeName: 'Myeongdong + Namdaemun Market', kr: '명동 + 남대문시장', maps: 'Namdaemun Market Myeongdong Seoul', zoneId: 'myeongdong', note: 'Namdaemun for affordable souvenirs, hats, bags; Myeongdong for street food and K-beauty shopping.', who: ['Candice'] },
+      ]},
+      { title: 'Dinner', icon: 'ti-tools-kitchen-2', color: '#EF4444', steps: [
+        { time: '6:30 PM', duration: '1 hr', title: 'Myeongdong Kyoja', placeName: 'Myeongdong Kyoja', kr: '명동교자', maps: 'Myeongdong Kyoja Seoul', zoneId: 'myeongdong', note: 'Knife-cut noodles and dumplings. Cash only, always busy — but turnover is fast and the menu is simple.', who: ['Wayne'] },
+      ]},
+    ],
+    optional: [
+      { title: 'Jogyesa Temple', placeName: 'Jogyesa Temple', kr: '조계사', maps: 'Jogyesa Temple Seoul', zoneId: 'gwanghwamun', note: '10–15 minutes, easy to add near Insadong. Beautifully decorated.' }
+    ]
+  },
+  {
+    id: 'yongsan-hannam', zoneId: 'yongsan', number: '02',
+    color: '#534AB7',
+    title: 'Yongsan & Hannam — Museums, Design & Food',
+    subtitle: 'Museums, design, international food, and a more relaxed adult day.',
+    tags: ['Museum day', 'Good rainy-day option', 'Food-focused', 'Moderate walking'],
+    warning: 'Gamasot Jokbal & Sundae-guk includes blood sausage — not right for sensitive stomachs. Use Namyeongdon or Gongi instead.',
+    sections: [
+      { title: 'Main route', icon: 'ti-building-museum', color: '#3B82F6', steps: [
+        { time: '10:00 AM', duration: '2–3 hrs', title: 'National Museum of Korea', placeName: 'National Museum of Korea', kr: '국립중앙박물관', maps: 'National Museum of Korea', zoneId: 'yongsan', note: 'Vast and world-class — do not try to see everything. Pick 2–3 galleries and keep the visit focused.', who: ['Wayne', 'Karen'] },
+        { time: '1:00 PM', duration: '1 hr', title: 'Lunch in Hannam-dong or Itaewon', placeName: 'Hannam-dong', kr: '한남동 또는 이태원', maps: 'Hannam-dong Seoul', zoneId: 'yongsan', note: 'Hannam is calmer and more polished; Itaewon is more international. Both have good options.', who: [] },
+        { time: '2:30 PM', duration: '1.5–2 hrs', title: 'Leeum Museum of Art', placeName: 'Leeum Museum of Art', kr: '리움미술관', maps: 'Leeum Museum of Art Seoul', zoneId: 'yongsan', note: 'Superb private museum — architecture by Botta, Nouvel, and Koolhaas. Check ticket availability first.', who: ['Karen', 'Candice'] },
+        { time: '4:30 PM', duration: '45 min', title: 'Itaewon Antique Furniture Street', placeName: 'Itaewon Antique Furniture Street', kr: '이태원 앤틱 가구 거리', maps: 'Itaewon Antique Furniture Street Seoul', zoneId: 'yongsan', note: 'Good browse for those who like old objects and furniture. Gives the area real character.', who: ['Karen'] },
+        { time: '6:30 PM', duration: '1 hr', title: 'Dinner — Namyeongdon or Gongi', placeName: 'Namyeongdon (남영돈) — pork collar BBQ', kr: '남영돈 또는 공기', maps: 'Namyeongdon Yongsan Seoul', zoneId: 'yongsan', note: 'Namyeongdon for casual pork BBQ; Gongi for a more refined modern Korean option.', who: ['Wayne'] },
+      ]},
+    ],
+    optional: [
+      { title: 'Gamasot Jokbal & Sundae-guk', placeName: 'Gamasot Jokbal & Sundae-guk', kr: '가마솥족발순대국', maps: 'Gamasot Jokbal Sundaeguk Yongsan', zoneId: 'yongsan', note: 'Only if the group actively wants a strong-flavoured local meal. Red flag for offal sensitivity.' }
+    ]
+  },
+  {
+    id: 'seongsu', zoneId: 'seongsu', number: '03',
+    color: '#BA7517',
+    title: 'Seongsu — Seoul Forest, Café Street & Han River',
+    subtitle: 'Trendy cafés, light walking, Seoul Forest, and modern creative Seoul.',
+    tags: ['Café route', 'Low-pressure day', 'Good with Seoul Forest', 'Modern Seoul'],
+    warning: 'Seongsu cafés can be spread out and crowded. Choose one or two, not five. If weather is bad, make this a café-and-shopping day rather than a park day.',
+    sections: [
+      { title: 'Suggested flow', icon: 'ti-leaf', color: '#10B981', steps: [
+        { time: '10:00 AM', duration: '1.5 hrs', title: 'Seoul Forest', placeName: 'Seoul Forest', kr: '서울숲', maps: 'Seoul Forest Seoul', zoneId: 'seongsu', note: 'Start here if the weather is good. Spacious, deer, wetlands, and open meadows. Good breathing room before the busier café streets.', who: ['Wayne', 'Karen'] },
+        { time: '11:30 AM', duration: '1.5 hrs', title: 'Seongsu-dong café street', placeName: 'Seongsu-dong café street', kr: '성수동 카페거리', maps: 'Seongsu Cafe Street Seoul', zoneId: 'seongsu', note: 'Walk and pick one or two stops. Patisserie Fruits for pretty desserts; On The for an industrial-chic Seongsu feel.', who: ['Candice'] },
+        { time: '1:00 PM', duration: '1 hr', title: 'Lunch — Jojo Kalguksu or Neungdong Minari', placeName: 'Jojo Kalguksu Seongsu', kr: '조조칼국수 또는 능동미나리', maps: 'Jojo Kalguksu Seongsu Seoul', zoneId: 'seongsu', note: 'Jojo Kalguksu is simpler and safer. Neungdong Minari is richer and more local. Pick based on group energy.', who: [] },
+        { time: '2:30 PM', duration: '1.5 hrs', title: 'Ttukseom Hangang Park', placeName: 'Ttukseom Hangang Park', kr: '뚝섬한강공원', maps: 'Ttukseom Hangang Park Seoul', zoneId: 'seongsu', note: 'Good if they have energy and the weather is clear. Riverside views, cycling, and a golden-hour option.', who: ['Wayne'] },
+        { time: '6:00 PM', duration: '1 hr', title: 'Dinner — Charcoal Dakgalbi Gyejarim', placeName: 'Charcoal Dakgalbi Gyejarim', kr: '숯불닭갈비 계자람', maps: 'Charcoal Dakgalbi Gyejarim Seongsu', zoneId: 'seongsu', note: 'Smoky charcoal-grilled spicy chicken. Skip if the group dislikes spice or smoky restaurants.', who: ['Wayne'] },
+      ]},
+    ]
+  },
+  {
+    id: 'jamsil', zoneId: 'jamsil', number: '04',
+    color: '#0F6E56',
+    title: 'Jamsil — Lotte World, Seokchon Lake & Songridan-gil',
+    subtitle: 'Lotte World, tower views, lake walking, and a clean modern Seoul day.',
+    tags: ['Line 2 friendly', 'Modern Seoul', 'Theme park option', 'Easy navigation'],
+    warning: 'Lotte World can consume the whole day. If they choose the theme park, keep the rest light: Seokchon Lake → dinner → hotel. Do not add Olympic Park on the same day.',
+    sections: [
+      { title: 'Suggested flow', icon: 'ti-building-skyscraper', color: '#14B8A6', steps: [
+        { time: '10:00 AM', duration: 'Half or full day', title: 'Lotte World (theme park)', placeName: 'Lotte World', kr: '롯데월드', maps: 'Lotte World Seoul', zoneId: 'jamsil', note: 'Only if they actually want a theme-park day. Line 2 to Jamsil. Buy tickets online to skip the box office.', who: ['Candice'] },
+        { time: '10:00 AM', duration: '2–3 hrs', title: 'Alternative: Lotte World Tower (Seoul Sky)', placeName: 'Lotte World Tower', kr: '롯데월드타워 서울스카이', maps: 'Lotte World Tower Seoul', zoneId: 'jamsil', note: 'Better for views, shopping, and a shorter visit rather than rides. Glass floor on the observatory — not for vertigo.', who: ['Candice', 'Wayne'] },
+        { time: '2:00 PM', duration: '1 hr', title: 'Seokchon Lake Park', placeName: 'Seokchon Lake Park', kr: '석촌호수', maps: 'Seokchon Lake Park Seoul', zoneId: 'jamsil', note: 'Easy free walk right beside Lotte. Beautiful in October as the leaves start to turn.', who: ['Karen', 'Wayne'] },
+        { time: '3:30 PM', duration: '1–1.5 hrs', title: 'Songridan-gil — cafés & browsing', placeName: 'Songridan-gil', kr: '송리단길', maps: 'Songridan-gil Seoul', zoneId: 'jamsil', note: 'Independent cafés and restaurants. Quieter than the Lotte complex. Candice Loving Club for desserts.', who: ['Candice'] },
+        { time: '6:00 PM', duration: '1 hr', title: 'Dinner — Downtooner or Mongchon Dakgalbi', placeName: 'Downtooner Jamsil', kr: '다운타우너 또는 몽촌닭갈비', maps: 'Downtooner Jamsil Seoul', zoneId: 'jamsil', note: 'Downtooner for an easy smash burger; Mongchon Dakgalbi for Korean spicy chicken.', who: [] },
+      ]},
+    ]
+  },
+  {
+    id: 'gangnam-coex', zoneId: 'gangnam', number: '05',
+    color: '#5F5E5A',
+    title: 'Gangnam & COEX — Starfield Library, Shopping & Apgujeong',
+    subtitle: 'COEX, Starfield Library, Gangnam boulevard, and Apgujeong dining.',
+    tags: ['Shopping day', 'Iconic Gangnam', 'COEX / Starfield', 'Good cafés'],
+    warning: 'COEX is genuinely labyrinthine — even locals get lost. Download the mall map before entering and budget extra time for navigation. Very crowded on weekends.',
+    sections: [
+      { title: 'Morning', icon: 'ti-books', color: '#6366F1', steps: [
+        { time: '10:00 AM', duration: '2–3 hrs', title: 'COEX Mall — Starfield Library', placeName: 'Starfield Library', kr: '별마당 도서관', maps: '별마당 도서관 COEX Seoul', zoneId: 'gangnam', note: 'The floor-to-ceiling bookshelf atrium is one of the most photogenic spots in Seoul. Free to enter inside COEX. Also explore the aquarium and cinema complex if time allows.', who: ['Candice', 'Wayne'] },
+        { time: '12:30 PM', duration: '30 min', title: 'Coffee inside Starfield Library', placeName: 'Café inside Starfield Library', kr: '별마당 카페', maps: '별마당 도서관 카페 Seoul', zoneId: 'gangnam', note: 'Sit in the library atrium with a coffee — the atmosphere is unlike anywhere else in Seoul.', who: ['Candice'] },
+      ]},
+      { title: 'Afternoon', icon: 'ti-shopping-bag', color: '#EC4899', steps: [
+        { time: '1:30 PM', duration: '45 min', title: 'Sinnonhyeon → Gangnam station boulevard walk', placeName: 'Sinnonhyeon to Gangnam shopping boulevard', kr: '신논현역 → 강남역 대로', maps: 'Gangnam Station Seoul', zoneId: 'gangnam', note: 'A broad, glitzy avenue lined with flagship stores and K-beauty brands. 30–45 minutes is enough to take in the "Gangnam style" energy without overdoing it.', who: ['Candice'] },
+        { time: '2:30 PM', duration: '1.5 hrs', title: 'Apgujeong Rodeo Street — cafés & boutiques', placeName: 'Apgujeong Rodeo Street', kr: '압구정 로데오 거리', maps: '압구정 로데오 서울', zoneId: 'gangnam', note: 'Much more curated than Gangnam station itself — better cafés, independent boutiques, and a calmer pace. Short taxi from Gangnam.', who: ['Karen', 'Candice'] },
+        { time: '4:00 PM', duration: '1 hr', title: 'Sesicella Dosan Park — afternoon coffee', placeName: 'Sesicella Dosan Park', kr: '세시셀라 도산공원점', maps: '세시셀라 도산공원 Seoul', zoneId: 'gangnam', note: 'Elegant café near Dosan Park — good pastries and one of the prettier café interiors in the Apgujeong area.', who: ['Candice', 'Karen'] },
+      ]},
+      { title: 'Dinner', icon: 'ti-tools-kitchen-2', color: '#EF4444', steps: [
+        { time: '6:30 PM', duration: '1 hr', title: 'Dinner — Gangseomyeonok or Muatan', placeName: 'Gangseomyeonok Apgujeong', kr: '강서면옥 압구정 또는 무탄', maps: '강서면옥 압구정 Seoul', zoneId: 'gangnam', note: 'Gangseomyeonok for naengmyeon and Korean BBQ; Muatan for a more modern creative Korean menu.', who: [] },
+      ]},
+    ]
+  }
+];
+
+// ─── Family tour data ───────────────────────────────────────────────────────
+const familyTourDays = [
+  {
+    id: 'family-oct4', date: 'Sample day 1', dayLabel: 'Day 1',
+    color: '#D85A30',
+    title: 'Arrival from Daejeon — Namsan & Huam-dong',
+    subtitle: 'The day after the wedding — take it easy. Travel from Daejeon to Seoul, check in, then a gentle afternoon.',
+    note: 'Breakfast in Daejeon before departure. KTX from Daejeon station to Seoul Station (~50 min). Check-in location TBD.',
+    sections: [
+      { title: 'Morning — travel from Daejeon', icon: 'ti-train', color: '#6B7280', steps: [
+        { time: 'Morning', duration: 'In Daejeon', title: 'Breakfast in Daejeon', placeName: 'Daejeon', kr: '대전 조식', maps: 'Daejeon Station', zoneId: '', note: 'Relax over a comfortable breakfast before heading to the KTX. No rush — the wedding was yesterday.', who: [] },
+        { time: '~10–11 AM', duration: '50 min ride', title: 'KTX — Daejeon → Seoul Station', placeName: 'Seoul Station', kr: '서울역', maps: 'Seoul Station KTX', zoneId: '', note: 'KTX takes about 50 minutes. Book tickets in advance. All together, plenty of luggage space.', who: [] },
+        { time: 'Midday', duration: '~1 hr', title: 'Hotel / Airbnb check-in (TBD)', placeName: 'Seoul Station', kr: '숙소 체크인', maps: 'Seoul Station', zoneId: '', note: 'Location TBD. Consider Myeongdong or Yongsan area for easy afternoon access to Namsan.', who: [] },
+      ]},
+      { title: 'Lunch', icon: 'ti-tools-kitchen-2', color: '#F59E0B', steps: [
+        { time: '1:00 PM', duration: '1 hr', title: 'Lunch near the hotel', placeName: 'Myeongdong', kr: '점심식사', maps: 'Myeongdong Seoul', zoneId: 'myeongdong', note: 'Keep it easy — Myeongdong street food or a simple Korean set meal. No long walks before Namsan.', who: ['Wayne'] },
+      ]},
+      { title: 'Afternoon', icon: 'ti-mountain', color: '#8B5CF6', steps: [
+        { time: '2:30 PM', duration: '2–3 hrs', title: 'Namsan & N Seoul Tower', placeName: 'Namsan & N Seoul Tower', kr: '남산서울타워', maps: 'N Seoul Tower Namsan', zoneId: 'myeongdong', note: 'Take the Namsan cable car up. The tower is iconic; the park walk itself is lovely. Best late afternoon as the light softens. Great city views for the whole group.', who: ['Wayne', 'Karen', 'Candice'] },
+        { time: '5:00 PM', duration: '1 hr', title: 'Huam-dong & Haebangchon (후암동 / 해방촌)', placeName: 'Huam-dong Haebangchon', kr: '후암동 해방촌', maps: 'Haebangchon Seoul Yongsan', zoneId: 'yongsan', note: 'A charming hillside neighbourhood below Namsan — eclectic cafés, independent shops, and a quieter, more residential Seoul. Good for a relaxed stroll.', who: ['Karen'] },
+      ]},
+      { title: 'Dinner', icon: 'ti-tools-kitchen-2', color: '#EF4444', steps: [
+        { time: '7:00 PM', duration: '1.5 hrs', title: 'Dinner (area TBD — near hotel)', placeName: 'Yongsan', kr: '저녁식사', maps: 'Itaewon Seoul', zoneId: 'yongsan', note: 'Keep dinner close to the hotel. Itaewon has the widest range of options for a mixed group. Grand Hyatt area also has good dining choices.', who: [] },
+      ]},
+    ]
+  },
+  {
+    id: 'family-oct5', date: 'Sample day 2', dayLabel: 'Day 2',
+    color: '#0F6E56',
+    title: 'Nami Island & Chuncheon Dakgalbi',
+    subtitle: 'A full day out of Seoul — morning departure, Chuncheon for lunch, Nami Island, return evening.',
+    note: 'Early departure recommended. Return to Seoul for dinner. Nami Island is about 1.5–2 hrs from Seoul by car or a combination of subway + ferry.',
+    sections: [
+      { title: 'Getting there', icon: 'ti-bus', color: '#6B7280', steps: [
+        { time: '8:30 AM', duration: '~1.5 hrs', title: 'Depart Seoul → Chuncheon', placeName: 'Chuncheon', kr: '춘천', maps: 'Chuncheon Station', zoneId: '', note: 'By car (fastest) or ITX-Cheongchun train from Yongsan/Sangbong (~80 min). Aim to arrive in Chuncheon by 10 AM.', who: [] },
+      ]},
+      { title: 'Chuncheon', icon: 'ti-tools-kitchen-2', color: '#F59E0B', steps: [
+        { time: '10:30 AM', duration: '1–1.5 hrs', title: 'Chuncheon dakgalbi lunch', placeName: 'Chuncheon Dakgalbi Street', kr: '춘천 닭갈비 골목', maps: 'Chuncheon Dakgalbi Street', zoneId: '', note: 'Chuncheon is the home of dakgalbi (spicy stir-fried chicken with vegetables and rice cakes). Several good restaurants on the famous dakgalbi alley — a genuine regional specialty.', who: ['Wayne'] },
+      ]},
+      { title: 'Nami Island', icon: 'ti-trees', color: '#10B981', steps: [
+        { time: '12:30 PM', duration: '30 min', title: 'Ferry to Nami Island', placeName: 'Nami Island', kr: '남이섬', maps: 'Nami Island Ferry Gapyeong', zoneId: '', note: 'Short ferry ride from Gapyeong wharf (~5 min). Buy tickets at the dock. October is a beautiful time — autumn colours are starting.', who: ['Karen', 'Wayne', 'Candice'] },
+        { time: '1:00 PM', duration: '2–3 hrs', title: 'Nami Island — walking & photos', placeName: 'Nami Island', kr: '남이섬 산책', maps: 'Nami Island Korea', zoneId: '', note: 'Famous for the iconic metasequoia tree avenue and its autumn colours. Great for photos. Easy, flat walking throughout the island.', who: ['Karen', 'Candice', 'Wayne'] },
+        { time: '4:00 PM', duration: '30 min', title: 'Ferry back + depart for Seoul', placeName: 'Gapyeong Wharf', kr: '가평 선착장', maps: 'Gapyeong Wharf Nami Island Ferry', zoneId: '', note: 'Return journey to Seoul. Aim to be back in Seoul by 6–6:30 PM for dinner.', who: [] },
+      ]},
+      { title: 'Evening — back in Seoul', icon: 'ti-tools-kitchen-2', color: '#EF4444', steps: [
+        { time: '7:00 PM', duration: '1.5 hrs', title: 'Dinner in Seoul (TBD)', placeName: 'Seoul', kr: '서울 저녁식사', maps: 'Itaewon Seoul', zoneId: 'yongsan', note: 'After a full day out, keep dinner easy and close to the hotel. Itaewon or Hannam-dong work well for a relaxed group dinner with varied options.', who: [] },
+      ]},
+    ]
+  },
+  {
+    id: 'family-oct6', date: 'Sample day 3', dayLabel: 'Day 3',
+    color: '#534AB7',
+    title: 'COEX Smart Life Week + Museum SAN or Aju Space',
+    subtitle: 'Conference for Wayne at COEX, then a choice of day trip — Museum SAN (Wonju) or Aju Space (Namyangju). Schedule still to be confirmed.',
+    note: 'This day has three separate threads that the group can split across. Wayne heads to COEX for the conference; others can do Apgujeong / Gangnam browsing, or join the out-of-Seoul options.',
+    sections: [
+      { title: 'Wayne — COEX Smart Life Week', icon: 'ti-device-laptop', color: '#6366F1', steps: [
+        { time: 'Morning', duration: 'Conference hours (TBC)', title: 'Smart Life Week 2026 — COEX', placeName: 'COEX Mall', kr: 'COEX 스마트라이프위크', maps: 'COEX Convention Center Seoul', zoneId: 'gangnam', note: 'Wayne attends the tech/gadget conference at COEX. The convention centre is separate from the mall — check the exact hall. Starfield Library is right next door for any breaks.', who: ['Wayne'] },
+        { time: 'Any break', duration: '30–45 min', title: 'Starfield Library (COEX)', placeName: 'Starfield Library', kr: '별마당 도서관', maps: '별마당 도서관 COEX Seoul', zoneId: 'gangnam', note: 'Right inside COEX — worth a visit during any break from the conference.', who: ['Wayne', 'Candice'] },
+      ]},
+      { title: 'Option A — Museum SAN, Wonju', icon: 'ti-building-museum', color: '#8B5CF6', steps: [
+        { time: 'Morning', duration: '~1.5 hrs each way', title: 'Drive to Museum SAN, Wonju', placeName: 'Museum SAN Wonju', kr: '뮤지엄 산 원주', maps: 'Museum SAN Wonju Korea', zoneId: '', note: 'A stunning architecture and art museum by Tadao Ando, set in the mountains outside Wonju. The building, gardens, and James Turrell light installations are genuinely exceptional. Best by car.', who: ['Karen'] },
+        { time: 'At the museum', duration: '2–3 hrs', title: 'Museum SAN — art & gardens', placeName: 'Museum SAN Wonju', kr: '뮤지엄 산', maps: 'Museum SAN Wonju Korea', zoneId: '', note: 'Allow plenty of time for the outdoor sculpture garden, water garden, and the Tadao Ando stone museum building. Book tickets in advance.', who: ['Karen', 'Candice'] },
+      ]},
+      { title: 'Option B — Aju Space, Namyangju', icon: 'ti-trees', color: '#10B981', steps: [
+        { time: 'Morning', duration: '~50 min each way', title: 'Drive to Aju Space, Namyangju', placeName: 'Aju Space Namyangju', kr: '아유 스페이스 남양주', maps: 'Aju Space Namyangju Korea', zoneId: '', note: 'A beautifully designed cultural and garden space in Namyangju — scenic, less well-known, and a more relaxed alternative to Museum SAN. Easier to reach from Seoul than Wonju.', who: ['Wayne', 'Karen'] },
+        { time: 'At Aju Space', duration: '2–3 hrs', title: 'Aju Space — gardens & architecture', placeName: 'Aju Space Namyangju', kr: '아유 스페이스', maps: 'Aju Space Namyangju Korea', zoneId: '', note: 'Good for photos, quiet garden walks, and a more off-the-beaten-path Seoul day trip. Check opening hours before going.', who: ['Candice', 'Wayne'] },
+      ]},
+      { title: 'Evening — last night together', icon: 'ti-tools-kitchen-2', color: '#EF4444', steps: [
+        { time: '7:00 PM', duration: '2 hrs', title: 'Final group dinner in Seoul', placeName: 'Seoul', kr: '마지막 저녁식사', maps: 'Hannam-dong Seoul', zoneId: 'yongsan', note: 'Last dinner before Demo travellers fly to the next destination on a sample day. Consider somewhere memorable — Hannam-dong or a Jongno restaurant would work well for a proper send-off.', who: [] },
+      ]},
+    ]
+  },
+  {
+    id: 'family-oct7', date: 'Sample day 4', dayLabel: 'Departure',
+    color: '#6B7280',
+    title: 'Demo travellers — Seoul → the next destination',
+    subtitle: 'Check-out and departure day.',
+    note: 'Family departs from Seoul for their onward journeys. Demo travellers fly to the next destination.',
+    sections: [
+      { title: 'Departure', icon: 'ti-plane', color: '#6B7280', steps: [
+        { time: 'Morning', duration: '—', title: 'Hotel check-out', placeName: 'Seoul', kr: '체크아웃', maps: 'Incheon Airport Seoul', zoneId: '', note: 'Check-out and say goodbye. Demo travellers head to Incheon Airport for the next destination flight.', who: [] },
+      ]},
+    ]
+  }
+];
+
+// ─── Who-might-love member config ────────────────────────────────────────────
+const whoConfig = {
+  Karen:   { color: '#BE185D', bg: '#FCE7F3', label: 'Karen might love' },
+  Wayne:   { color: '#1D4ED8', bg: '#DBEAFE', label: 'Wayne might love' },
+  Candice: { color: '#7C3AED', bg: '#EDE9FE', label: 'Candice might love' },
+};
+
+function renderWhoTags(who = []) {
+  if (!who.length) return '';
+  return who.map(name => {
+    const c = whoConfig[name];
+    if (!c) return '';
+    return `<span class="who-tag" style="background:${c.bg};color:${c.color};border-color:${c.color}40;"><i class="ti ti-heart" aria-hidden="true"></i>${c.label}</span>`;
+  }).join('');
+}
+
+function renderCourseStep(step) {
+  const mapsQuery = step.maps || step.placeName || step.title;
+  const zoneId = step.zoneId || '';
+  const button = `<button class="place-map-trigger" type="button" data-place-name="${escapeAttr(step.placeName || step.title)}" data-place-query="${escapeAttr(mapsQuery)}" data-place-kr="${escapeAttr(step.kr || '')}" data-zone-id="${escapeAttr(zoneId)}" title="Show approximate location on the map">${step.title}<span class="place-map-cue">map</span></button>`;
+  const whoHTML = renderWhoTags(step.who || []);
+  return `<div class="course-step">
+    <div class="course-time-col">
+      <div class="course-time-label">${step.time}</div>
+      ${step.duration ? `<div class="course-duration"><i class="ti ti-clock" aria-hidden="true"></i>${step.duration}</div>` : ''}
+    </div>
+    <div class="course-step-main">
+      <div class="course-place-line">${button}${step.kr ? `<span class="place-name-kr">${step.kr}</span>` : ''}</div>
+      ${whoHTML ? `<div class="course-who-row">${whoHTML}</div>` : ''}
+      <div class="course-note">${step.note}</div>
+    </div>
+  </div>`;
+}
+
+function renderRouteStep(step) { return renderCourseStep(step); }
+
+function renderCourseCard(course, isFamily = false) {
+  const accent = course.color || '#6B7280';
+  const tags = (course.tags || []).map(tag => `<span class="place-tag tag-neutral">${tag}</span>`).join('');
+  const sections = (course.sections || []).map((section) => {
+    const sColor = section.color || accent;
+    return `<div class="course-section">
+      <div class="course-section-title" style="color:${sColor};">
+        <span class="course-section-icon" style="background:${sColor}20;color:${sColor};"><i class="ti ${section.icon || 'ti-route'}" aria-hidden="true"></i></span>
+        ${section.title}
+      </div>
+      <div class="course-steps-block">
+        ${(section.steps || []).map(renderCourseStep).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  const optional = (course.optional || []).length
+    ? `<div class="course-optional"><strong>Extra stop if time allows:</strong> ${(course.optional||[]).map(step => `<span class="course-choice">${renderInlinePlaceButton(step)}</span> — ${step.note}`).join('<br>')}</div>`
+    : '';
+  const dayLabel = isFamily ? course.dayLabel : `Day ${course.number}`;
+  const noteHTML = course.note ? `<div class="course-day-note"><i class="ti ti-info-circle" aria-hidden="true"></i>${course.note}</div>` : '';
+  return `<article class="course-card" data-course-id="${escapeAttr(course.id)}" style="--course-accent:${accent};">
+    <div class="course-card-header" style="border-left:4px solid ${accent};">
+      <div class="course-kicker" style="color:${accent};">${dayLabel}${isFamily ? ` &mdash; ${course.date}` : ''}</div>
+      <div class="course-title">${course.title}</div>
+      <div class="course-summary">${course.subtitle}</div>
+      ${noteHTML}
+      ${tags ? `<div class="course-meta">${tags}</div>` : ''}
+    </div>
+    <div class="course-body">
+      ${course.warning ? `<div class="course-warning"><i class="ti ti-alert-triangle" aria-hidden="true"></i><span><strong>Heads up:</strong> ${course.warning}</span></div>` : ''}
+      ${sections}
+      ${optional}
+    </div>
+  </article>`;
+}
+
+function renderTourCourses() {
+  const list = document.getElementById('jin-picks-list');
+  if (!list) return;
+  list.innerHTML = suggestedRouteCourses.map(c => renderCourseCard(c, false)).join('');
+  attachMapTriggers(list);
+}
+
+function renderFamilyTour() {
+  const list = document.getElementById('family-tour-list');
+  if (!list) return;
+  list.innerHTML = familyTourDays.map(c => renderCourseCard(c, true)).join('');
+  attachMapTriggers(list);
+}
+
+function attachMapTriggers(root = document) {
+  root.querySelectorAll('.place-map-trigger').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      showPlaceOnMap(btn.dataset.placeName, btn.dataset.placeQuery, btn.dataset.placeKr, btn.dataset.zoneId);
+    });
+  });
+}
+
+
+
+function zoneLayerStyle(zoneId, active = false) {
+  const base = zoneMapConfig[zoneId];
+  return {
+    color: base.color,
+    weight: active ? 3 : 2,
+    opacity: active ? 1 : 0.95,
+    fillColor: base.color,
+    fillOpacity: active ? 0.28 : 0.18
+  };
+}
+
+function updateMapSelection() {
+  if (!zoneMap) return;
+  Object.entries(zoneLayerRegistry).forEach(([zoneId, layer]) => {
+    layer.setStyle(zoneLayerStyle(zoneId, zoneId === currentZone));
+    const labelEl = zoneLabelRegistry[zoneId]?.getElement?.();
+    if (labelEl) {
+      labelEl.style.transform = zoneId === currentZone ? 'translateY(-1px) scale(1.02)' : 'translateY(0) scale(1)';
+      labelEl.style.boxShadow = zoneId === currentZone ? '0 6px 16px rgba(0,0,0,0.14)' : '0 4px 12px rgba(0,0,0,0.10)';
+      labelEl.style.background = zoneId === currentZone ? 'rgba(255,255,255,0.98)' : 'rgba(255,255,255,0.92)';
+    }
+  });
+}
+
+function initLeafletMap() {
+  if (zoneMap || typeof L === 'undefined') return;
+  const mapEl = document.getElementById('leaflet-map');
+  if (!mapEl) return;
+  zoneMap = L.map(mapEl, {
+    center: [37.554, 127.015],
+    zoom: 12,
+    minZoom: 11,
+    maxZoom: 15,
+    zoomControl: true,
+    scrollWheelZoom: false
+  });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(zoneMap);
+
+  const bounds = [];
+
+  Object.entries(zoneMapConfig).forEach(([zoneId, cfg]) => {
+    const polygon = L.polygon(cfg.polygon, zoneLayerStyle(zoneId, false)).addTo(zoneMap);
+    polygon.on('click', () => selectZone(zoneId));
+    polygon.on('mouseover', () => polygon.setStyle({ fillOpacity: currentZone === zoneId ? 0.28 : 0.24 }));
+    polygon.on('mouseout', () => updateMapSelection());
+    zoneLayerRegistry[zoneId] = polygon;
+    bounds.push(...cfg.polygon);
+
+    const labelIcon = L.divIcon({
+      className: '',
+      html: `<div class="map-zone-label"><span class="en">${cfg.label.en}</span><span class="kr">${cfg.label.kr}</span></div>`,
+      iconSize: null
+    });
+    const labelMarker = L.marker([cfg.label.lat, cfg.label.lng], { icon: labelIcon, keyboard: false }).addTo(zoneMap);
+    labelMarker.on('click', () => selectZone(zoneId));
+    zoneLabelRegistry[zoneId] = labelMarker;
+  });
+
+  mapLandmarks.forEach((lm) => {
+    const icon = L.divIcon({ className: '', html: `<div class="map-landmark-label">${lm.text}</div>`, iconSize: null });
+    L.marker([lm.lat, lm.lng], { icon, interactive: false, keyboard: false }).addTo(zoneMap);
+  });
+
+  zoneMap.fitBounds(bounds, { padding: [18, 18] });
+}
+
+
+function selectZone(zoneId) {
+  if (!document.getElementById('page-map')?.classList.contains('active')) {
+    showAppPage('map');
+  }
+  currentZone = zoneId;
+  currentTab = 'attractions';
+  renderDetail();
+  document.querySelectorAll('.zone-btn').forEach(el => el.classList.remove('active'));
+  const zEl = document.getElementById('z-' + zoneId);
+  if (zEl) zEl.classList.add('active');
+  document.querySelectorAll('.legend-item').forEach(el => el.classList.remove('active'));
+  const lEl = document.getElementById('leg-' + zoneId);
+  if (lEl) lEl.classList.add('active');
+  updateMapSelection();
+  if (zoneMap && zoneLayerRegistry[zoneId]) {
+    zoneMap.fitBounds(zoneLayerRegistry[zoneId].getBounds(), { padding: [28, 28], maxZoom: 13 });
+  }
+}
+
+function setTab(tab) { currentTab = tab; renderDetail(); }
+
+function renderDetail() {
+  const panel = document.getElementById('detail-panel');
+  const z = zones[currentZone];
+  if (!z) return;
+  let noteHTML = z.note ? `<div class="zone-note"><i class="ti ti-info-circle" aria-hidden="true"></i><span>${z.note}</span></div>` : '';
+  const tabs = ['attractions','restaurants','cafes'].map(t => {
+    const isActive = t === currentTab ? ' active' : '';
+    const count = z[t].length;
+    const jinCount = z[t].filter(p => p.jin).length;
+    const icon = t === 'attractions' ? 'ti-camera' : t === 'restaurants' ? 'ti-tools-kitchen-2' : 'ti-coffee';
+    const jinBadge = jinCount > 0 ? ` <span style="font-size:13px;background:#FBEAF0;color:#993556;border:1px solid #ED93B1;padding:1px 5px;border-radius:3px;">${jinCount} picks</span>` : '';
+    return `<button class="tab${isActive}" onclick="setTab('${t}')"><i class="ti ${icon}" aria-hidden="true"></i> ${tabLabels[t]} <span style="color:var(--color-text-tertiary);font-size:14px;">(${count})</span>${jinBadge}</button>`;
+  }).join('');
+
+  const allItems = z[currentTab];
+  const jinItems = allItems.filter(p => p.jin);
+  const regularItems = allItems.filter(p => !p.jin);
+
+  function renderCard(p) {
+    const meta = getPlaceMeta(p);
+    const tagsHTML = (p.tags||[]).map(tag=>`<span class="place-tag ${tagClass[tag.t]||'tag-neutral'}">${tag.l}</span>`).join('');
+    const mapsLink = p.maps ? `<a class="maps-btn" href="${mapsUrl(p.maps)}" target="_blank" rel="noopener"><i class="ti ti-map-pin" aria-hidden="true"></i> Google Maps</a>` : '';
+    const transportHTML = renderTransportBadges(meta);
+    const cuisineHTML = currentTab === 'restaurants' && meta.cuisine ? `<span class="meta-chip cuisine-chip"><i class="ti ti-tools-kitchen-2" aria-hidden="true"></i> ${meta.cuisine}</span>` : '';
+    const redFlagHTML = meta.redFlag ? `<div class="place-redflag"><i class="ti ti-alert-triangle" aria-hidden="true"></i><span><strong>Red flag:</strong> ${meta.redFlag}</span></div>` : '';
+    const placeButton = `<button class="place-name place-map-trigger" type="button" data-place-name="${escapeAttr(p.name)}" data-place-query="${escapeAttr(p.maps || p.kr || p.name)}" data-place-kr="${escapeAttr(p.kr || '')}" data-zone-id="${escapeAttr(currentZone)}" title="Show approximate location on the map">${p.name}<span class="place-map-cue">map</span></button>`;
+    return `<div class="${p.jin?'place-card jin-pick':'place-card'}">
+      <div class="place-top">
+        <i class="ti ${p.icon} place-icon" aria-hidden="true"></i>
+        <div class="place-info">
+          <div class="place-title-row">${placeButton}${transportHTML}</div>
+          <div class="place-name-kr">${p.kr}</div>
+          <div class="place-meta-row"><span class="meta-chip"><i class="ti ti-clock" aria-hidden="true"></i> ${meta.time}</span>${cuisineHTML}</div>
+          <div class="place-desc">${p.desc}</div>
+          ${redFlagHTML}
+        </div>
+      </div>
+      <div class="place-footer"><div class="tags">${tagsHTML}</div>${mapsLink}</div>
+    </div>`;
+  }
+
+  let itemsHTML = '';
+  if (jinItems.length > 0 && regularItems.length > 0) {
+    itemsHTML += `<div class="section-divider"><i class="ti ti-heart" aria-hidden="true"></i> Local personal picks</div>`;
+    itemsHTML += jinItems.map(renderCard).join('');
+    itemsHTML += `<div class="section-divider">More recommendations</div>`;
+    itemsHTML += regularItems.map(renderCard).join('');
+  } else {
+    itemsHTML = allItems.map(renderCard).join('');
+  }
+
+  panel.innerHTML = `
+    <div class="zone-header">
+      <div class="zone-color-dot" style="background:${z.color};"></div>
+      <div><div class="zone-title">${z.name}</div><div class="zone-subtitle">${z.nameKr}</div></div>
+    </div>
+    ${noteHTML}
+    <div class="tabs">${tabs}</div>
+    <div class="place-list">${itemsHTML}</div>
+  `;
+
+  attachMapTriggers(panel);
+}
+
+function renderInlinePlaceButton(step) {
+  const mapsQuery = step.maps || step.placeName || step.title;
+  return `<button class="place-map-trigger" type="button" data-place-name="${escapeAttr(step.placeName || step.title)}" data-place-query="${escapeAttr(mapsQuery)}" data-place-kr="${escapeAttr(step.kr || '')}" data-zone-id="${escapeAttr(step.zoneId || '')}" title="Show approximate location on the map">${step.title}<span class="place-map-cue">map</span></button>`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderHotels();
+  renderTourCourses();
+  renderFamilyTour();
+  showAppPage('home');
+});
+</script>
+</body></html>
